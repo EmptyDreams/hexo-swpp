@@ -121,7 +121,6 @@
          * @return boolean 是否刷新全站缓存
          */
         const parseChange = (list, elements, version) => {
-            let biliFlag = false
             let result = true
             for (let element of elements) {
                 const ver = element['version']
@@ -129,14 +128,12 @@
                     result = false
                     break
                 }
-                if (ver.endsWith('b')) biliFlag = true
                 const jsonList = element['change']
                 if (jsonList) {
                     for (let it of jsonList)
                         list.push(new CacheChangeExpression(it))
                 }
             }
-            if (biliFlag) list.push(new CacheChangeExpression({flag: "str", value: "/bilibili/"}))
             // resul=true时表明读取了已存在的所有版本信息后依然没有找到客户端当前的版本号
             // 说明跨版本幅度过大，直接清理全站
             return result
@@ -184,7 +181,7 @@
                     } else list.refresh = true
                 }
                 resolve({list: list, version: newVersion})
-            }).catch(() => dbVersion.write('{"global":0, "local":"-"}'))
+            }).catch(() => dbVersion.write('{"global":0, "local": -1}'))
         })
         const url = `/update.json` //需要修改JSON地址的在这里改
         return new Promise(resolve => fetchNoCache(url)
@@ -262,24 +259,17 @@
                 case 'all':
                     this.match = checkCache
                     break
-                case 'post':
-                    this.match = url => url.endsWith('postsInfo.json') ||
-                        forEachValues(post => url.endsWith(`posts/${post}/`))
-                    break
                 case 'html':
-                    this.match = url => cacheList.html.match(new URL(url)) || url.endsWith('postsInfo.json')
+                    this.match = url => url.href.match(/(\/|\/index\.html)$/)
                     break
                 case 'file':
                     this.match = url => forEachValues(value => url.endsWith(value))
                     break
-                case 'new':
-                    this.match = url => url.endsWith('postsInfo.json') || url.match(/\/archives\//)
-                    break
-                case 'page':
-                    this.match = url => forEachValues(value => url.match(new RegExp(`\/${value}(\/|)$`)))
-                    break
                 case 'str':
                     this.match = url => forEachValues(value => url.includes(value))
+                    break
+                case 'reg':
+                    this.match = url => forEachValues(value => url.match(new RegExp(value, 'i')))
                     break
                 default: throw `未知表达式：${JSON.stringify(json)}`
             }
