@@ -1,4 +1,4 @@
-// noinspection DuplicatedCode
+// noinspection JSUnresolvedVariable
 
 "use strict"
 
@@ -9,14 +9,12 @@ const path = require('path')
 
 const findScript = () => path.resolve('./', 'sw-cache')
 
-// noinspection JSUnresolvedVariable
 const config = hexo.config
 const pluginConfig = config.version
 const root = config.url + config.root
 const { cacheList, replaceList } = require(findScript())
 
 // 生成 update.json
-// noinspection JSUnresolvedVariable
 hexo.on('exit', async () => {
     if (!fs.existsSync('public/index.html')) return logger.info('跳过生成')
     const cachePath = 'cacheList.json'
@@ -29,9 +27,7 @@ hexo.on('exit', async () => {
 })
 
 // 生成 sw.js
-// noinspection JSUnresolvedVariable
 hexo.extend.generator.register('buildSw', () => {
-    // noinspection JSUnresolvedVariable
     if (pluginConfig.customJS) return
     const absPath = module.path + '/sw-template.js'
     const rootPath = path.resolve('./')
@@ -47,9 +43,7 @@ hexo.extend.generator.register('buildSw', () => {
 })
 
 // 生成注册 sw 的代码
-// noinspection JSUnresolvedVariable
 hexo.extend.injector.register('head_begin', () => {
-    // noinspection JSUnresolvedVariable
     return `<script>
               (() => {
                 const sw = navigator.serviceWorker
@@ -147,7 +141,6 @@ const compare = (oldCache, newCache) => {
 
 /** 判断指定资源是否需要合并 */
 const isMerge = (pathname, tidied) => {
-    // noinspection JSUnresolvedVariable
     const optional = pluginConfig.merge
     if (pathname.includes(`/${config.tag_dir}/`)) {
         if (optional.tags ?? true) {
@@ -196,7 +189,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
         }
     }
     // 读取拓展 json
-    const expand = fs.existsSync(name) ? JSON.parse(fs.readFileSync(name)) : undefined
+    const expand = fs.existsSync(name) ? JSON.parse(fs.readFileSync(name, 'utf-8')) : undefined
     // 获取上次最新的版本
     let oldVersion = oldUpdate?.info[0]?.version ?? 0
     if (typeof oldVersion !== 'number') {
@@ -211,6 +204,10 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     }
     // 整理更新的数据
     const tidied = tidyDiff(dif, expand)
+    if (expand.all) return writeJson({
+        global: (oldUpdate?.global ?? 0) + (tidied.updateGlobal ? 1 : 0),
+        info: [newInfo]
+    })
     // 如果没有更新的文件就直接退出
     if (
         tidied.page.size === 0 && tidied.file.size === 0 &&
@@ -226,7 +223,6 @@ const mergeUpdateWithOld = (newInfo, oldUpdate, tidied) => {
         global: (oldUpdate?.global ?? 0) + (tidied.updateGlobal ? 1 : 0),
         info: [newInfo]
     }
-    // noinspection JSUnresolvedVariable
     const charLimit = pluginConfig.charLimit ?? 1024
     if (JSON.stringify(result).length > charLimit) {
         return {
@@ -280,7 +276,6 @@ const zipInfo = (newInfo, oldInfo) => {
 // 将更新推送到 info
 const pushUpdateToInfo = (info, tidied) => {
     // 推送页面更新
-    // noinspection JSUnresolvedVariable
     if (tidied.page.size > (pluginConfig.maxHtml ?? 15)) {
         // 如果 html 数量超过阈值就直接清掉所有 html
         info.change.push({flag: 'html'})
@@ -326,7 +321,6 @@ const tidyDiff = (dif, expand) => {
         /** 标记是否更新 global 版本号 */
         updateGlobal: expand?.global
     }
-    // noinspection JSUnresolvedVariable
     const mode = pluginConfig.precisionMode
     for (let it of dif) {
         const url = new URL(root + it)  // 当前文件的 URL
@@ -377,7 +371,6 @@ function replaceRequest(url) {
 
 /** 对 hexo 的全局变量进行排序，以保证每次生成的结果一致 */
 (() => {
-    // noinspection JSUnresolvedVariable
     const locals = hexo.locals
     const compare = (a, b) => a < b ? -1 : 1
     const sort = (name, value) => locals.get(name).data.sort((a, b) => compare(a[value], b[value]))
