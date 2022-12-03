@@ -14,37 +14,39 @@ const pluginConfig = config.swpp
 const root = config.url + config.root
 const { cacheList, replaceList } = require(findScript())
 
-// 生成 update.json
-hexo.on('exit', async () => {
-    if (!fs.existsSync('public/index.html')) return logger.info('跳过生成')
-    const cachePath = 'cacheList.json'
-    const updatePath = 'update.json'
-    const oldCache = await getJsonFromNetwork(cachePath)
-    const oldUpdate = await getJsonFromNetwork(updatePath)
-    const newCache = buildNewJson(cachePath)
-    const dif = compare(oldCache, newCache)
-    buildUpdateJson(updatePath, dif, oldUpdate)
-})
+if (pluginConfig?.enable) {
+    // 生成 update.json
+    hexo.on('exit', async () => {
+        if (!fs.existsSync('public/index.html'))
+            return logger.info('跳过生成 update.json')
+        const cachePath = 'cacheList.json'
+        const updatePath = 'update.json'
+        const oldCache = await getJsonFromNetwork(cachePath)
+        const oldUpdate = await getJsonFromNetwork(updatePath)
+        const newCache = buildNewJson(cachePath)
+        const dif = compare(oldCache, newCache)
+        buildUpdateJson(updatePath, dif, oldUpdate)
+    })
 
-// 生成 sw.js
-hexo.extend.generator.register('buildSw', () => {
-    if (pluginConfig.customJS) return
-    const absPath = module.path + '/sw-template.js'
-    const rootPath = path.resolve('./')
-    const relativePath = path.relative(rootPath, absPath)
-    const template = fs.readFileSync(relativePath, 'utf8')
-    const cache = fs.readFileSync('sw-cache.js', 'utf8')
-        .replace('module.exports.cacheList', 'const cacheList')
-        .replace('module.exports.replaceList', 'const replaceList')
-    return {
-        path: 'sw.js',
-        data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
-    }
-})
+    // 生成 sw.js
+    hexo.extend.generator.register('buildSw', () => {
+        if (pluginConfig.customJS) return
+        const absPath = module.path + '/sw-template.js'
+        const rootPath = path.resolve('./')
+        const relativePath = path.relative(rootPath, absPath)
+        const template = fs.readFileSync(relativePath, 'utf8')
+        const cache = fs.readFileSync('sw-cache.js', 'utf8')
+            .replace('module.exports.cacheList', 'const cacheList')
+            .replace('module.exports.replaceList', 'const replaceList')
+        return {
+            path: 'sw.js',
+            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+        }
+    })
 
-// 生成注册 sw 的代码
-hexo.extend.injector.register('head_begin', () => {
-    return `<script>
+    // 生成注册 sw 的代码
+    hexo.extend.injector.register('head_begin', () => {
+        return `<script>
               (() => {
                 const sw = navigator.serviceWorker
                 const error = () => ${pluginConfig.onError}
@@ -53,7 +55,8 @@ hexo.extend.injector.register('head_begin', () => {
                 })?.catch(error)) error()
               })()
           </script>`
-}, "default")
+    }, "default")
+}
 
 /** 遍历指定目录下的所有文件 */
 const eachAllFile = (root, cb) => {

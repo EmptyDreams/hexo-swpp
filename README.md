@@ -4,10 +4,11 @@
 
 # 配置说明
 
-&emsp;&emsp;`onError`及`onSuccess`为必填项（无缺省设置），其余为可选项，可选项的缺省设置为下方列出的设置。
+&emsp;&emsp;`enable`、`onError`及`onSuccess`为必填项（无缺省设置），其余为可选项，可选项的缺省设置为下方列出的设置。
 
 ```yaml
 swpp:
+  enable: true
   # 是否使用自定义的 sw，为 true 时不自动生成 sw.js，但是仍然会插入注册 sw 的代码
   # 注：不支持自定义 sw.js 的路径及文件名，sw.js 必须放置在 source_dir 中
   customJS: false
