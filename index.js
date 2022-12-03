@@ -12,7 +12,7 @@ const findScript = () => path.resolve('./', 'sw-cache')
 const config = hexo.config
 const pluginConfig = config.swpp
 const root = config.url + config.root
-const { cacheList, replaceList } = require(findScript())
+const { cacheList, replaceList } = pluginConfig?.enable ? require(findScript()) : undefined
 
 if (pluginConfig?.enable) {
     // 生成 update.json
