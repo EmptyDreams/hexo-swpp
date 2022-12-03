@@ -10,11 +10,13 @@
 swpp:
   enable: true
   # 是否使用自定义的 sw，为 true 时不自动生成 sw.js，但是仍然会插入注册 sw 的代码
-  # 注：不支持自定义 sw.js 的路径及文件名，sw.js 必须放置在 source_dir 中
+  # 注意：不支持自定义 sw.js 的路径及文件名，sw.js 必须放置在 source_dir 中
   customJS: false
   # 注册 sw 发生错误时触发的 js 代码，如果包含多个指令需使用花括号（{}）包裹
+  # 注意：SW 注册代码将直接内嵌在 HTML 首部，该代码执行时其它 JS 不一定完成了加载
   onError: "document.addEventListener('DOMContentLoaded', () => kms.pushInfo('当前浏览器不支持SW，建议更换浏览器以获取最佳体验~'))"
   # 注册 sw 成功后触发的 js 代码，如果包含多个指令需使用花括号（{}）包裹
+  # 注意：SW 注册代码将直接内嵌在 HTML 首部，该代码执行时其它 JS 不一定完成了加载
   onSuccess: "location.reload()"
   # 最大 HTML 数量，超过这个数量后会直接清除所有 HTML 缓存
   maxHtml: 15
