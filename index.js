@@ -197,7 +197,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     // 读取拓展 json
     const expand = fs.existsSync(name) ? JSON.parse(fs.readFileSync(name, 'utf-8')) : undefined
     // 获取上次最新的版本
-    let oldVersion = oldUpdate?.info[0]?.version ?? 0
+    let oldVersion = oldUpdate?.info?.at(0)?.version ?? 0
     if (typeof oldVersion !== 'number') {
         // 当上次最新的版本号不是数字是尝试对其进行转换，如果无法转换则直接置零
         if (oldVersion.match('\D')) oldVersion = 0
