@@ -30,7 +30,7 @@ if (pluginConfig?.enable) {
 
     // 生成 sw.js
     hexo.extend.generator.register('buildSw', () => {
-        if (pluginConfig.customJS) return
+        if (pluginConfig.sw.custom) return
         const absPath = module.path + '/sw-template.js'
         const rootPath = path.resolve('./')
         const relativePath = path.relative(rootPath, absPath)
@@ -40,7 +40,8 @@ if (pluginConfig?.enable) {
             .replace('module.exports.replaceList', 'const replaceList')
         return {
             path: 'sw.js',
-            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache),
+            layout: 'js'
         }
     })
 
@@ -49,13 +50,31 @@ if (pluginConfig?.enable) {
         return `<script>
               (() => {
                 const sw = navigator.serviceWorker
-                const error = () => ${pluginConfig.onError}
+                const error = () => ${pluginConfig.sw.onerror}
                 if (!sw?.register('/sw.js')?.then(() => {
-                  if (!sw.controller) ${pluginConfig.onSuccess}
+                  if (!sw.controller) ${pluginConfig.sw.onsuccess}
                 })?.catch(error)) error()
               })()
           </script>`
     }, "default")
+
+    if (!pluginConfig.dom?.custom) {
+        hexo.extend.injector.register('body_begin', () => {
+            return `<script src="/js/sw-dom.js"></script>`
+        })
+        hexo.extend.generator.register('buildDomJs', () => {
+            const absPath = module.path + '/sw-dom.js'
+            const rootPath = path.resolve('./')
+            const relativePath = path.relative(rootPath, absPath)
+            const template = fs.readFileSync(relativePath, 'utf-8')
+                .replaceAll('// ${onSuccess}', pluginConfig.dom.onsuccess)
+            return {
+                path: 'sw-dom.js',
+                data: template,
+                layout: 'js'
+            }
+        })
+    }
 }
 
 /** 遍历指定目录下的所有文件 */
