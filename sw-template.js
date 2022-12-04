@@ -181,7 +181,11 @@
                     } else list.refresh = true
                 }
                 resolve({list: list, version: newVersion})
-            }).catch(() => dbVersion.write('{"global":0, "local": -1}'))
+            }).catch(e => {
+                console.error(e)
+                console.error('更新过程中发生异常，已经还原版本信息！')
+                dbVersion.write('{"global":-1, "local": -1}')
+            })
         })
         const url = `/update.json` //需要修改JSON地址的在这里改
         return new Promise(resolve => fetchNoCache(url)
