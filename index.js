@@ -40,8 +40,7 @@ if (pluginConfig?.enable) {
             .replace('module.exports.replaceList', 'const replaceList')
         return {
             path: 'sw.js',
-            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache),
-            layout: 'js'
+            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
         }
     })
 
@@ -71,8 +70,7 @@ if (pluginConfig?.enable) {
                 .replaceAll('// ${onSuccess}', pluginConfig.dom.onsuccess)
             return {
                 path: 'sw-dom.js',
-                data: template,
-                layout: 'js'
+                data: template
             }
         })
     }
@@ -137,7 +135,12 @@ const buildNewJson = path => {
 const getJsonFromNetwork = async path => {
     const url = root + path
     try {
-        const result = await fetch(url)
+        const result = await fetch(url, {
+            headers: {
+                referer: new URL(url).hostname,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
+            }
+        })
         if (result.status < 200 || result.status >= 400 || !result.data)
             // noinspection ExceptionCaughtLocallyJS
             throw `拉取 ${url} 时出现异常（${result.status}）`
