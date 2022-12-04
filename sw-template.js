@@ -266,6 +266,11 @@
                 case 'html':
                     this.match = url => url.href.match(/(\/|\/index\.html)$/)
                     break
+                case 'page':
+                    this.match = url => forEachValues(
+                        value => url.endsWith(`/${value}/`) || url.endsWith(`/${value}/index.html`)
+                    )
+                    break
                 case 'file':
                     this.match = url => forEachValues(value => url.endsWith(value))
                     break
