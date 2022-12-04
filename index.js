@@ -4,7 +4,7 @@
 
 const fs = require('fs')
 const logger = require('hexo-log')()
-const axios = require('axios')
+const fetch = require('node-fetch')
 const path = require('path')
 
 const findScript = () => path.resolve('./', 'sw-cache')
@@ -60,6 +60,7 @@ if (pluginConfig?.enable) {
 
     if (!pluginConfig.dom?.custom) {
         hexo.extend.injector.register('body_begin', () => {
+            // noinspection HtmlUnknownTarget
             return `<script src="/js/sw-dom.js"></script>`
         })
         hexo.extend.generator.register('buildDomJs', () => {
@@ -136,14 +137,11 @@ const buildNewJson = path => {
 const getJsonFromNetwork = async path => {
     const url = root + path
     try {
-        const result = await axios.get(url, {
-            responseEncoding: 'utf-8',
-            headers: pluginConfig.headers
-        })
+        const result = await fetch(url)
         if (result.status < 200 || result.status >= 400 || !result.data)
             // noinspection ExceptionCaughtLocallyJS
             throw `拉取 ${url} 时出现异常（${result.status}）`
-        return result.data
+        return await result.json()
     } catch (e) {
         if (e.toString().includes('404'))
             logger.error(`拉取 ${url} 时出现 404，如果您是第一次构建请忽略这个错误`)
