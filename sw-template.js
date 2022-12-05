@@ -264,7 +264,7 @@
                     this.match = checkCache
                     break
                 case 'html':
-                    this.match = url => url.href.match(/(\/|\/index\.html)$/)
+                    this.match = url => url.match(/(\/|\/index\.html)$/)
                     break
                 case 'page':
                     this.match = url => forEachValues(
