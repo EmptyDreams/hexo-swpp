@@ -353,7 +353,7 @@ const tidyDiff = (dif, expand) => {
             logger.error(`[buildUpdate] 指定 URL(${url.pathname}) 未查询到缓存规则！`)
             continue
         }
-        if (cache.clean) tidied.updateGlobal = true
+        if (!cache.clean) tidied.updateGlobal = true
         if (it.match(/(\/|\.html)$/)) { // 判断缓存是否是 html
             if (isMerge(it, tidied)) continue
             if (mode.html ?? false) tidied.page.add(url.pathname)
