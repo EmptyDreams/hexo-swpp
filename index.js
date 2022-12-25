@@ -10,14 +10,14 @@ const path = require('path')
 const findScript = () => path.resolve('./', 'sw-cache')
 
 const config = hexo.config
-const pluginConfig = config.swpp
-const root = config.url + config.root
+const pluginConfig = config.swpp || hexo.theme.config
+const root = config.url + (config.root ?? '/')
 const { cacheList, replaceList } = pluginConfig?.enable ? require(findScript()) : undefined
 
 if (pluginConfig?.enable) {
     // 生成 update.json
-    hexo.on('exit', async () => {
-        if (!fs.existsSync('public/index.html'))
+    hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件以及相关缓存', {}, async () => {
+        if (!fs.existsSync(config.public_dir))
             return logger.info('跳过生成 update.json')
         const cachePath = 'cacheList.json'
         const updatePath = 'update.json'
@@ -50,7 +50,7 @@ if (pluginConfig?.enable) {
               (() => {
                 const sw = navigator.serviceWorker
                 const error = () => ${pluginConfig.sw.onerror}
-                if (!sw?.register('/sw.js')?.then(() => {
+                if (!sw?.register('${new URL(root).pathname}sw.js')?.then(() => {
                   if (!sw.controller) ${pluginConfig.sw.onsuccess}
                 })?.catch(error)) error()
               })()
@@ -124,7 +124,7 @@ const buildNewJson = path => {
     let publicRoot = config.public_dir || 'public/'
     if (!publicRoot.endsWith('/')) publicRoot += '/'
     fs.writeFileSync(`${publicRoot}${path}`, JSON.stringify(result), 'utf-8')
-    logger.info(`Generated: ${path}`)
+    logger.info(`SwppGenerated: ${path}`)
     return result
 }
 
@@ -141,9 +141,6 @@ const getJsonFromNetwork = async path => {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
             }
         })
-        if (result.status < 200 || result.status >= 400)
-            // noinspection ExceptionCaughtLocallyJS
-            throw `拉取 ${url} 时出现异常（${result.status}）`
         return await result.json()
     } catch (e) {
         // noinspection SpellCheckingInspection
@@ -211,7 +208,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     /** 将对象写入文件，如果对象为 null 或 undefined 则跳过写入 */
     const writeJson = json => {
         if (json) {
-            logger.info(`Generated: ${name}`)
+            logger.info(`SwppGenerated: ${name}`)
             fs.writeFileSync(`public/${name}`, JSON.stringify(json), 'utf-8')
         }
     }
