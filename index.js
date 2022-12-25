@@ -36,11 +36,11 @@ if (pluginConfig?.enable) {
         const relativePath = path.relative(rootPath, absPath)
         const template = fs.readFileSync(relativePath, 'utf8')
         const cache = fs.readFileSync('sw-cache.js', 'utf8')
-            .replace('module.exports.cacheList', 'const cacheList')
-            .replace('module.exports.replaceList', 'const replaceList')
+            .replaceAll('module.exports.cacheList', 'const cacheList')
+            .replaceAll('module.exports.replaceList', 'const replaceList')
         return {
             path: 'sw.js',
-            data: template.replace('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+            data: template.replaceAll('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
         }
     })
 
