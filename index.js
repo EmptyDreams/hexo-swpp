@@ -60,7 +60,7 @@ if (pluginConfig?.enable) {
     if (!pluginConfig.dom?.custom) {
         hexo.extend.injector.register('body_begin', () => {
             // noinspection HtmlUnknownTarget
-            return `<script src="/js/sw-dom.js"></script>`
+            return `<script src="/sw-dom.js"></script>`
         })
         hexo.extend.generator.register('buildDomJs', () => {
             const absPath = module.path + '/sw-dom.js'
