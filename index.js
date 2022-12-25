@@ -18,7 +18,7 @@ if (pluginConfig?.enable) {
     // 生成 update.json
     hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件以及相关缓存', {}, async () => {
         if (!fs.existsSync(config.public_dir))
-            return logger.info('跳过生成 update.json')
+            return logger.info('未检测到发布目录，跳过 swpp 执行')
         const cachePath = 'cacheList.json'
         const updatePath = 'update.json'
         const oldCache = await getJsonFromNetwork(cachePath)
@@ -124,7 +124,7 @@ const buildNewJson = path => {
     let publicRoot = config.public_dir || 'public/'
     if (!publicRoot.endsWith('/')) publicRoot += '/'
     fs.writeFileSync(`${publicRoot}${path}`, JSON.stringify(result), 'utf-8')
-    logger.info(`SwppGenerated: ${path}`)
+    logger.info(`Generated: ${path}`)
     return result
 }
 
@@ -135,6 +135,7 @@ const buildNewJson = path => {
 const getJsonFromNetwork = async path => {
     const url = root + path
     try {
+        // noinspection SpellCheckingInspection
         const result = await fetch(url, {
             headers: {
                 referer: new URL(url).hostname,
@@ -142,10 +143,10 @@ const getJsonFromNetwork = async path => {
             }
         })
         switch (result.status) {
-            case 200: case 301: case 302: break
-            case 404:
-                logger.error(`拉取 ${url} 时出现 404，如果您是第一次构建请忽略这个错误`)
+            case 200: case 301: case 302:
                 break
+            case 404:
+                return logger.error(`拉取 ${url} 时出现 404，如果您是第一次构建请忽略这个错误`)
             default:
                 // noinspection ExceptionCaughtLocallyJS
                 throw `拉取 ${url} 时出现 ${result.status}，拉取到的内容：\n${result}`
@@ -217,7 +218,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     /** 将对象写入文件，如果对象为 null 或 undefined 则跳过写入 */
     const writeJson = json => {
         if (json) {
-            logger.info(`SwppGenerated: ${name}`)
+            logger.info(`Generated: ${name}`)
             fs.writeFileSync(`public/${name}`, JSON.stringify(json), 'utf-8')
         }
     }
@@ -237,7 +238,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     }
     // 整理更新的数据
     const tidied = tidyDiff(dif, expand)
-    if (expand.all) return writeJson({
+    if (expand?.all) return writeJson({
         global: (oldUpdate?.global ?? 0) + (tidied.updateGlobal ? 1 : 0),
         info: [newInfo]
     })
