@@ -6,12 +6,16 @@ const fs = require('fs')
 const logger = require('hexo-log')()
 const fetch = require('node-fetch')
 const path = require('path')
+const crypto = require("crypto")
+const cheerio = require('cheerio')
+const postcss = require('postcss')
 
 const findScript = () => path.resolve('./', 'sw-cache')
 
 const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
 const root = config.url + (config.root ?? '/')
+const domain = new URL(root).hostname
 const { cacheList, replaceList } = pluginConfig?.enable ? require(findScript()) : undefined
 
 if (pluginConfig?.enable) {
@@ -23,7 +27,7 @@ if (pluginConfig?.enable) {
         const updatePath = 'update.json'
         const oldCache = await getJsonFromNetwork(cachePath)
         const oldUpdate = await getJsonFromNetwork(updatePath)
-        const newCache = buildNewJson(cachePath)
+        const newCache = await buildNewJson(cachePath)
         const dif = compare(oldCache, newCache)
         buildUpdateJson(updatePath, dif, oldUpdate)
     })
@@ -101,13 +105,14 @@ const isExclude = pathname => {
  * 格式为 `{"[path]": "[md5Value]"}`
  *
  * @param path 相对于根目录的路径
- * @return {Object} 生成的 json 对象
+ * @return {Promise<Object>} 生成的 json 对象
  */
-const buildNewJson = path => {
-    const crypto = require('crypto')    // 用于计算 md5
+const buildNewJson = path => new Promise(resolve => {
     const result = {}                   // 存储新的 MD5 表
     const removeIndex = config.pretty_urls?.trailing_index
     const removeHtml = config.pretty_urls?.trailing_html
+    const taskList = []                 // 拉取任务列表
+    const cache = new Set()             // 已经计算过的文件
     eachAllFile(config.public_dir, path => {
         if (!fs.existsSync(path)) return logger.error(`${path} 不存在！`)
         let endIndex
@@ -115,17 +120,141 @@ const buildNewJson = path => {
         else if (removeHtml && path.endsWith('.html')) endIndex = path.length - 5
         else endIndex = path.length
         const url = new URL(root + path.substring(7, endIndex))
-        if (findCache(url) && !isExclude(url.pathname)) {
-            const content = fs.readFileSync(path)
+        if (isExclude(url.href)) return
+        let content = null
+        if (findCache(url)) {
+            content = fs.readFileSync(path, 'utf-8')
             const key = decodeURIComponent(url.pathname)
             result[key] = crypto.createHash('md5').update(content).digest('hex')
         }
+        // 外链监控
+        const external = pluginConfig.external
+        if (!pluginConfig.external?.enable) return
+        const indexOf = (str, ...chars) => {
+            let result = str.length
+            chars.forEach(it => {
+                const index = str.indexOf(it)
+                result = Math.min(result, index < 0 ? result : index)
+            })
+            return result
+        }
+        const lastIndexOf = (str, ...chars) => {
+            let result = -1
+            chars.forEach(it => result = Math.max(result, str.lastIndexOf(it)))
+            return result
+        }
+        // 处理指定链接
+        const handleLink = link => {
+            // 跳过本地文件的计算
+            if (!link.match(/^(http|\/\/)/) || cache.has(link)) return
+            cache.add(link)
+            const url = new URL(link.startsWith('/') ? `http:${link}` : link)
+            if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
+            taskList.push(
+                fetchFile(link, () => console.log(`拉取 ${link} 时出现 404 错误`))
+                    .then(response => response.text())
+                    .then(text => {
+                        const key = decodeURIComponent(link)
+                        result[key] = crypto.createHash('md5').update(text).digest('hex')
+                        if (key.endsWith('.js')) handleJsContent(text)
+                        else if (key.endsWith('.css')) handleCssContent(text)
+                    }).catch(err => logger.error(`拉取 ${link} 时出现异常：${err}`))
+            )
+        }
+        // 处理指定 JS
+        const handleJsContent = text => {
+            if (!external.js) return
+            if (cache.has(text)) return
+            cache.add(text)
+            external.js.forEach(it => {
+                const reg = new RegExp(`${it.head}(['"\`])(.*?)\\1${it.tail}`, 'm')
+                text.match(reg)?.forEach(content => {
+                    try {
+                        const start = indexOf(content, "'", '"', '`') + 1
+                        const end = lastIndexOf(content, "'", '"', '`')
+                        const link = content.substring(start, end)
+                        if (!link.match(/['"$`]/)) handleLink(link)
+                    } catch (e) {
+                        logger.error(`SwppJsHandler: 处理 ${content} 时出现异常`)
+                        logger.error(e)
+                    }
+                })
+            })
+        }
+        const handleCssContent = text => {
+            if (cache.has(text)) return
+            cache.add(text)
+            postcss.parse(text).walkDecls(decl => {
+                if (decl.value.includes('url')) {
+                    decl.value.match(/url\(([^)]+)\)/)
+                        .map(it => it.match(/^(url\(['"])/) ? it.substring(5, it.length - 2) : it.substring(4, it.length - 1))
+                        .forEach(link => handleLink(link))
+                }
+            })
+        }
+        // 如果是 html 则获取所有 script 和 link 标签拉取的文件
+        if (path.endsWith('/') || path.endsWith('.html')) {
+            if (!content) content = fs.readFileSync(path, 'utf-8')
+            const html = cheerio.load(content)
+            html('script[src]')
+                .map((i, ele) => html(ele).attr('src'))
+                .each((i, it) => handleLink(it))
+            html('link[href]')
+                .map((i, ele) => html(ele).attr('href'))
+                .each((i, it) => handleLink(it))
+            html('script:not([src])')
+                .map((i, ele) => html(ele).text())
+                .each((i, text) => handleJsContent(text))
+            html('style')
+                .map((i, ele) => html(ele).text())
+                .each((i, text) => handleCssContent(text))
+        } else if (path.endsWith('.js')) {
+            if (!content) content = fs.readFileSync(path, 'utf-8')
+            handleJsContent(content)
+        } else if (path.endsWith('.css')) {
+            if (!content) content = fs.readFileSync(path, 'utf-8')
+            handleCssContent(content)
+        }
     })
-    let publicRoot = config.public_dir || 'public/'
-    if (!publicRoot.endsWith('/')) publicRoot += '/'
-    fs.writeFileSync(`${publicRoot}${path}`, JSON.stringify(result), 'utf-8')
-    logger.info(`Generated: ${path}`)
-    return result
+    Promise.all(taskList).then(() => {
+        let publicRoot = config.public_dir || 'public/'
+        if (!publicRoot.endsWith('/')) publicRoot += '/'
+        fs.writeFileSync(`${publicRoot}${path}`, JSON.stringify(result), 'utf-8')
+        logger.info(`Generated: ${path}`)
+        resolve(result)
+    })
+})
+
+/**
+ * 从网络拉取一个文件
+ * @param link 文件链接
+ * @param onNotFound 出现 404 时的操作
+ * @returns {Promise<*>} response
+ */
+const fetchFile = async (link, onNotFound) => {
+    try {
+        // noinspection SpellCheckingInspection
+        const response = await fetch(link, {
+            headers: {
+                referer: new URL(link).hostname,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
+            }
+        })
+        switch (response.status) {
+            case 200: case 301: case 302:
+                break
+            case 404:
+                return onNotFound()
+            default:
+                // noinspection ExceptionCaughtLocallyJS
+                throw `拉取 ${link} 时出现 ${response.status}，拉取到的内容：\n${response}`
+        }
+        return response
+    } catch (e) {
+        // noinspection SpellCheckingInspection
+        if (e.code === 'ENOTFOUND') onNotFound()
+        else throw e
+    }
 }
 
 /**
@@ -134,30 +263,11 @@ const buildNewJson = path => {
  */
 const getJsonFromNetwork = async path => {
     const url = root + path
-    try {
-        // noinspection SpellCheckingInspection
-        const result = await fetch(url, {
-            headers: {
-                referer: new URL(url).hostname,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
-            }
-        })
-        switch (result.status) {
-            case 200: case 301: case 302:
-                break
-            case 404:
-                return logger.error(`拉取 ${url} 时出现 404，如果您是第一次构建请忽略这个错误`)
-            default:
-                // noinspection ExceptionCaughtLocallyJS
-                throw `拉取 ${url} 时出现 ${result.status}，拉取到的内容：\n${result}`
-        }
-        return await result.json()
-    } catch (e) {
-        // noinspection SpellCheckingInspection
-        if (e.code === 'ENOTFOUND')
-            logger.error(`拉取 ${url} 时出现 404，如果您是第一次构建请忽略这个错误`)
-        else throw e
-    }
+    const response = await fetchFile(
+        url,
+        () => logger.error(`拉取 ${link} 时出现 404，如果您是第一次构建请忽略这个错误`)
+    )
+    return response.json()
 }
 
 /**

@@ -1,10 +1,12 @@
 {
   "name": "hexo-swpp",
-  "version": "1.2.9",
+  "version": "1.3.0",
   "main": "index.js",
   "dependencies": {
     "hexo-log": "^3.0.0",
-    "node-fetch": "^2.0.0"
+    "node-fetch": "^2.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "postcss": "^8.4.20"
   },
   "files": [
     "index.js",
@@ -23,5 +25,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/EmptyDreams/hexo-swpp.git"
-  }
+  },
+  "homepage": "https://kmar.top/posts/73014407/"
 }
