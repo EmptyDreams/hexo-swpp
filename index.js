@@ -150,14 +150,14 @@ const buildNewJson = path => new Promise(resolve => {
             const url = new URL(link.startsWith('/') ? `http:${link}` : link)
             if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
             taskList.push(
-                fetchFile(link, () => logger.log(`拉取 ${link} 时出现 404 错误`))
+                fetchFile(link)
                     .then(response => response.text())
                     .then(text => {
                         const key = decodeURIComponent(link)
                         result[key] = crypto.createHash('md5').update(text).digest('hex')
                         if (key.endsWith('.js')) handleJsContent(text)
                         else if (key.endsWith('.css')) handleCssContent(text)
-                    }).catch(err => logger.error(`拉取 ${link} 时出现异常：${err}`))
+                    }).catch(err => logger.error(`拉取 ${err.url} 时出现 ${err.status ?? '未知'} 异常：${err}`))
             )
         }
         // 处理指定 JS
@@ -227,49 +227,45 @@ const buildNewJson = path => new Promise(resolve => {
 /**
  * 从网络拉取一个文件
  * @param link 文件链接
- * @param onNotFound 出现 404 时的操作
  * @returns {Promise<*>} response
  */
-const fetchFile = async (link, onNotFound) => {
-    try {
-        link = replaceDevRequest(link)
-        // noinspection SpellCheckingInspection
-        const response = await fetch(link, {
-            headers: {
-                referer: new URL(link).hostname,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
-            },
-            timeout: 1500
-        })
+const fetchFile = link => new Promise((resolve, reject) => {
+    link = replaceDevRequest(link)
+    // noinspection SpellCheckingInspection
+    fetch(link, {
+        headers: {
+            referer: new URL(link).hostname,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62'
+        },
+        timeout: 1500
+    }).then(response => {
         switch (response.status) {
             case 200: case 301: case 302:
+                resolve(response)
                 break
-            case 404:
-                return onNotFound()
             default:
-                // noinspection ExceptionCaughtLocallyJS
-                throw `拉取 ${link} 时出现 ${response.status}，拉取到的内容：\n${response}`
+                reject(response)
+                break
         }
-        return response
-    } catch (e) {
-        // noinspection SpellCheckingInspection
-        if (e.code === 'ENOTFOUND') onNotFound()
-        else throw e
-    }
-}
+    }).catch(err => {
+        err.url = link
+        reject(err)
+    })
+})
 
 /**
  * 从网络拉取 json 文件
  * @param path 文件路径（相对于根目录）
  */
-const getJsonFromNetwork = async path => {
+const getJsonFromNetwork = path => new Promise(resolve => {
     const url = nodePath.join(root, path)
-    const response = await fetchFile(
-        url,
-        () => logger.error(`拉取 ${link} 时出现 404，如果您是第一次构建请忽略这个错误`)
-    )
-    return response.json()
-}
+    fetchFile(url)
+        .then(response => resolve(response.json()))
+        .catch(err => {
+            if (err.status === 404) logger.error(`拉取 ${err.url} 时出现 404，如果您是第一次构建请忽略这个错误`)
+            else throw err
+        })
+})
 
 /**
  * 对比两个 md5 缓存表的区别
