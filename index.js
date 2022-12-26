@@ -167,7 +167,7 @@ const buildNewJson = path => new Promise(resolve => {
             if (cache.has(text)) return
             cache.add(text)
             external.js.forEach(it => {
-                const reg = new RegExp(`${it.head}(['"\`])(.*?)\\1${it.tail}`, 'm')
+                const reg = new RegExp(`${it.head}(['"\`])(.*?)\\1${it.tail}`, 'mg')
                 text.match(reg)?.forEach(content => {
                     try {
                         const start = indexOf(content, "'", '"', '`') + 1
@@ -181,12 +181,13 @@ const buildNewJson = path => new Promise(resolve => {
                 })
             })
         }
+        // 处理 CSS 内容
         const handleCssContent = text => {
             if (cache.has(text)) return
             cache.add(text)
             postcss.parse(text).walkDecls(decl => {
                 if (decl.value.includes('url')) {
-                    decl.value.match(/url\(([^)]+)\)/)
+                    decl.value.match(/url\(([^)]+)\)/g)
                         .map(it => it.match(/^(url\(['"])/) ? it.substring(5, it.length - 2) : it.substring(4, it.length - 1))
                         .forEach(link => handleLink(link))
                 }
