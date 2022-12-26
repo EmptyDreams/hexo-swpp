@@ -234,6 +234,7 @@ const buildNewJson = path => new Promise(resolve => {
  */
 const fetchFile = async (link, onNotFound) => {
     try {
+        link = replaceDevRequest(link)
         // noinspection SpellCheckingInspection
         const response = await fetch(link, {
             headers: {
@@ -506,6 +507,18 @@ function findCache(url) {
 function replaceRequest(url) {
     for (let key in replaceList) {
         const value = replaceList[key]
+        for (let source of value.source) {
+            if (url.match(source)) {
+                url = url.replace(source, value.dist)
+            }
+        }
+    }
+    return url
+}
+
+function replaceDevRequest(url) {
+    if (!pluginConfig.devReplace) return url
+    for (let value of pluginConfig.devReplace) {
         for (let source of value.source) {
             if (url.match(source)) {
                 url = url.replace(source, value.dist)
