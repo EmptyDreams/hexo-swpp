@@ -5,12 +5,12 @@
 const fs = require('fs')
 const logger = require('hexo-log')()
 const fetch = require('node-fetch')
-const path = require('path')
+const nodePath = require('path')
 const crypto = require("crypto")
 const cheerio = require('cheerio')
 const postcss = require('postcss')
 
-const findScript = () => path.resolve('./', 'sw-cache')
+const findScript = () => nodePath.resolve('./', 'sw-cache')
 
 const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
@@ -36,8 +36,8 @@ if (pluginConfig?.enable) {
     hexo.extend.generator.register('buildSw', () => {
         if (pluginConfig.sw.custom) return
         const absPath = module.path + '/sw-template.js'
-        const rootPath = path.resolve('./')
-        const relativePath = path.relative(rootPath, absPath)
+        const rootPath = nodePath.resolve('./')
+        const relativePath = nodePath.relative(rootPath, absPath)
         const template = fs.readFileSync(relativePath, 'utf8')
         const cache = fs.readFileSync('sw-cache.js', 'utf8')
             .replaceAll('module.exports.cacheList', 'const cacheList')
@@ -68,8 +68,8 @@ if (pluginConfig?.enable) {
         })
         hexo.extend.generator.register('buildDomJs', () => {
             const absPath = module.path + '/sw-dom.js'
-            const rootPath = path.resolve('./')
-            const relativePath = path.relative(rootPath, absPath)
+            const rootPath = nodePath.resolve('./')
+            const relativePath = nodePath.relative(rootPath, absPath)
             const template = fs.readFileSync(relativePath, 'utf-8')
                 .replaceAll('// ${onSuccess}', pluginConfig.dom.onsuccess)
             return {
@@ -86,8 +86,7 @@ const eachAllFile = (root, cb) => {
     if (stats.isFile()) cb(root)
     else {
         const files = fs.readdirSync(root)
-        if (!root.endsWith('/')) root += '/'
-        files.forEach(it => eachAllFile(root + it, cb))
+        files.forEach(it => eachAllFile(nodePath.join(root, it), cb))
     }
 }
 
@@ -119,7 +118,7 @@ const buildNewJson = path => new Promise(resolve => {
         if (removeIndex && path.endsWith('/index.html')) endIndex = path.length - 10
         else if (removeHtml && path.endsWith('.html')) endIndex = path.length - 5
         else endIndex = path.length
-        const url = new URL(root + path.substring(7, endIndex))
+        const url = new URL(nodePath.join(root, path.substring(7, endIndex)))
         if (isExclude(url.href)) return
         let content = null
         if (findCache(url)) {
@@ -151,7 +150,7 @@ const buildNewJson = path => new Promise(resolve => {
             const url = new URL(link.startsWith('/') ? `http:${link}` : link)
             if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
             taskList.push(
-                fetchFile(link, () => console.log(`拉取 ${link} 时出现 404 错误`))
+                fetchFile(link, () => logger.log(`拉取 ${link} 时出现 404 错误`))
                     .then(response => response.text())
                     .then(text => {
                         const key = decodeURIComponent(link)
@@ -218,9 +217,8 @@ const buildNewJson = path => new Promise(resolve => {
         }
     })
     Promise.all(taskList).then(() => {
-        let publicRoot = config.public_dir || 'public/'
-        if (!publicRoot.endsWith('/')) publicRoot += '/'
-        fs.writeFileSync(`${publicRoot}${path}`, JSON.stringify(result), 'utf-8')
+        const publicRoot = config.public_dir || 'public/'
+        fs.writeFileSync(nodePath.join(publicRoot, path), JSON.stringify(result), 'utf-8')
         logger.info(`Generated: ${path}`)
         resolve(result)
     })
@@ -265,7 +263,7 @@ const fetchFile = async (link, onNotFound) => {
  * @param path 文件路径（相对于根目录）
  */
 const getJsonFromNetwork = async path => {
-    const url = root + path
+    const url = nodePath.join(root, path)
     const response = await fetchFile(
         url,
         () => logger.error(`拉取 ${link} 时出现 404，如果您是第一次构建请忽略这个错误`)
@@ -470,7 +468,7 @@ const tidyDiff = (dif, expand) => {
     }
     const mode = pluginConfig.precisionMode
     for (let it of dif) {
-        const url = new URL(root + it)  // 当前文件的 URL
+        const url = new URL(nodePath.join(root, it))  // 当前文件的 URL
         const cache = findCache(url)    // 查询缓存
         if (!cache) {
             logger.error(`[buildUpdate] 指定 URL(${url.pathname}) 未查询到缓存规则！`)
