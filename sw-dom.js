@@ -35,7 +35,7 @@
     if (sessionStorage.getItem('updated')) {
         // ${onSuccess}
         sessionStorage.removeItem('updated')
-    } else setTimeout(() => postMessage2SW('update'), 1000)
+    } else postMessage2SW('update')
     navigator.serviceWorker.addEventListener('message', event => {
         const data = event.data
         switch (data.type) {

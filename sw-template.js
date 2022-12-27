@@ -171,7 +171,7 @@
                     dbVersion.write(JSON.stringify(newVersion))
                     return resolve(newVersion)
                 }
-                const refresh = parseChange(list, elementList, oldVersion.local)
+                const refresh = oldVersion.local < '@$$[escape]' ? true : parseChange(list, elementList, oldVersion.local)
                 dbVersion.write(JSON.stringify(newVersion))
                 //如果需要清理全站
                 if (refresh) {

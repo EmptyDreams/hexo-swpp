@@ -38,13 +38,15 @@ if (pluginConfig?.enable) {
         const absPath = module.path + '/sw-template.js'
         const rootPath = nodePath.resolve('./')
         const relativePath = nodePath.relative(rootPath, absPath)
-        const template = fs.readFileSync(relativePath, 'utf8')
         const cache = fs.readFileSync('sw-cache.js', 'utf8')
             .replaceAll('module.exports.cacheList', 'const cacheList')
             .replaceAll('module.exports.replaceList', 'const replaceList')
+        const swContent = fs.readFileSync(relativePath, 'utf8')
+            .replaceAll('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+            .replaceAll("'@$$[escape]'", (pluginConfig.escape ?? 0).toString())
         return {
             path: 'sw.js',
-            data: template.replaceAll('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+            data: swContent
         }
     })
 
