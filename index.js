@@ -159,7 +159,8 @@ const buildNewJson = path => new Promise(resolve => {
             if (!link.match(/^(http|\/\/)/) || cache.has(link)) return
             cache.add(link)
             const url = new URL(link.startsWith('/') ? `http:${link}` : link)
-            if (url.hostname === domain || !findCache(url) || isExclude(url.href) || isSkipFetch(url.href)) return
+            if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
+            if (isSkipFetch(url.href)) result[decodeURIComponent(link)] = '0'
             taskList.push(
                 fetchFile(link)
                     .then(response => response.text())
