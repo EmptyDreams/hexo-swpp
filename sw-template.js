@@ -30,8 +30,8 @@
     })
 
     self.addEventListener('fetch', event => {
-        const replace = replaceRequest(event.request)
-        const request = replace || event.request
+        const request = event.request
+        const replace = replaceRequest(request)
         const url = new URL(request.url)
         if (findCache(url)) {
             event.respondWith(new Promise(async resolve => {
@@ -47,7 +47,7 @@
                 }
                 resolve(response)
             }))
-        } else if (replace !== null) {
+        } else if (replace) {
             event.respondWith(fetch(request))
         }
     })
@@ -94,21 +94,20 @@
      * 故该函数允许重复替换，例如：<br/>
      * 如果第一个匹配项把链接由"http://abc.com/"改为了"https://abc.com/"<br/>
      * 此时第二个匹配项可以以此为基础继续进行修改，替换为"https://abc.net/"<br/>
-     * @return {Request|null}
+     * @return {boolean} 是否进行了替换
      */
     function replaceRequest(request) {
-        let url = request.url;
         let flag = false
         for (let key in replaceList) {
             const value = replaceList[key]
             for (let source of value.source) {
-                if (url.match(source)) {
-                    url = url.replace(source, value.dist)
+                if (request.url.match(source)) {
+                    request.url = request.url.replace(source, value.dist)
                     flag = true
                 }
             }
         }
-        return flag ? new Request(url) : null
+        return flag
     }
 
     /**
