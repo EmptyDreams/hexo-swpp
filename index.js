@@ -100,6 +100,15 @@ const isExclude = pathname => {
     return false
 }
 
+const isSkipFetch = url => {
+    const skipList = pluginConfig.external?.skip
+    if (!skipList) return false
+    for (let reg of skipList) {
+        if (url.match(new RegExp(reg))) return true
+    }
+    return false
+}
+
 /**
  * 构建 md5 缓存表并写入到发布目录中
  *
@@ -150,7 +159,7 @@ const buildNewJson = path => new Promise(resolve => {
             if (!link.match(/^(http|\/\/)/) || cache.has(link)) return
             cache.add(link)
             const url = new URL(link.startsWith('/') ? `http:${link}` : link)
-            if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
+            if (url.hostname === domain || !findCache(url) || isExclude(url.href) || isSkipFetch(url.href)) return
             taskList.push(
                 fetchFile(link)
                     .then(response => response.text())
@@ -513,8 +522,9 @@ function replaceRequest(url) {
 }
 
 function replaceDevRequest(url) {
-    if (!pluginConfig.devReplace) return url
-    for (let value of pluginConfig.devReplace) {
+    const external = pluginConfig.external
+    if (!external?.enable || !external.replace) return url
+    for (let value of external.replace) {
         for (let source of value.source) {
             if (url.match(source)) {
                 url = url.replace(source, value.dist)
