@@ -31,6 +31,7 @@
 
     self.addEventListener('fetch', event => {
         const request = event.request
+        if (request.method !== 'GET') return
         const replace = replaceRequest(request)
         const url = new URL(request.url)
         if (findCache(url)) {
