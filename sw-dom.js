@@ -44,7 +44,7 @@
                 if (!list) break
                 sessionStorage.setItem('updated', '1')
                 // noinspection JSUnresolvedVariable,JSUnresolvedFunction
-                if (Pjax?.isSupported()) {
+                if (window.Pjax.isSupported()) {
                     Promise.all(list.map(url => {
                         if (url.endsWith('.js'))
                             return pjaxUpdate(url)
