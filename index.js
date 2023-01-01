@@ -369,7 +369,10 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
         !(tidied.archives || tidied.categories || tidied.tags || tidied.index)
     ) return writeJson(oldUpdate ?? {
         global: 0,
-        info: [{flag: 'all'}]
+        info: [{
+            version: 0,
+            change: {}
+        }]
     })
     pushUpdateToInfo(newInfo, tidied)
     const result = mergeUpdateWithOld(newInfo, oldUpdate, tidied)
