@@ -367,7 +367,10 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
     if (
         tidied.page.size === 0 && tidied.file.size === 0 &&
         !(tidied.archives || tidied.categories || tidied.tags || tidied.index)
-    ) return writeJson(oldUpdate)
+    ) return writeJson(oldUpdate ?? {
+        global: 0,
+        info: [{flag: 'all'}]
+    })
     pushUpdateToInfo(newInfo, tidied)
     const result = mergeUpdateWithOld(newInfo, oldUpdate, tidied)
     return writeJson(result)
