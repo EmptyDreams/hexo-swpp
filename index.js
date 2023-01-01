@@ -274,8 +274,10 @@ const getJsonFromNetwork = path => new Promise(resolve => {
     fetchFile(url)
         .then(response => resolve(response.json()))
         .catch(err => {
-            if (err.status === 404) logger.error(`拉取 ${err.url} 时出现 404，如果您是第一次构建请忽略这个错误`)
-            else throw err
+            if (err.status === 404) {
+                logger.error(`拉取 ${err.url} 时出现 404，如果您是第一次构建请忽略这个错误`)
+                resolve()
+            } else throw err
         })
 })
 
