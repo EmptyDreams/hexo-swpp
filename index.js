@@ -370,10 +370,7 @@ const buildUpdateJson = (name, dif, oldUpdate) => {
         !(tidied.archives || tidied.categories || tidied.tags || tidied.index)
     ) return writeJson(oldUpdate ?? {
         global: 0,
-        info: [{
-            version: 0,
-            change: {}
-        }]
+        info: [{version: 0}]
     })
     pushUpdateToInfo(newInfo, tidied)
     const result = mergeUpdateWithOld(newInfo, oldUpdate, tidied)
@@ -432,7 +429,7 @@ const zipInfo = (newInfo, oldInfo) => {
                 result.push(value)
         }
     }
-    return result
+    return result.length === 0 ? undefined : result
 }
 
 // 将更新推送到 info
