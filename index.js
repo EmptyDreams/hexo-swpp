@@ -119,22 +119,23 @@ const isSkipFetch = url => {
  */
 const buildNewJson = path => new Promise(resolve => {
     const result = {}                   // 存储新的 MD5 表
-    const removeIndex = config.pretty_urls?.trailing_index
-    const removeHtml = config.pretty_urls?.trailing_html
     const taskList = []                 // 拉取任务列表
     const cache = new Set()             // 已经计算过的文件
-    eachAllFile(config.public_dir, path => {
+    const publicDir = config.public_dir
+    const start = publicDir.length + 1
+    eachAllFile(publicDir, path => {
         if (!fs.existsSync(path)) return logger.error(`${path} 不存在！`)
-        let endIndex
-        if (removeIndex && path.endsWith('/index.html')) endIndex = path.length - 10
-        else if (removeHtml && path.endsWith('.html')) endIndex = path.length - 5
-        else endIndex = path.length
-        const url = new URL(nodePath.join(root, path.substring(7, endIndex)))
-        if (isExclude(url.href)) return
+        const srcUrl = new URL(nodePath.join(root, path))
+        let prettyPathname
+        if (path.endsWith('/index.html')) prettyPathname = path.substring(start, path.length - 10)
+        else if (path.endsWith('.html')) prettyPathname = path.substring(start, path.length - 5) + '/'
+        else prettyPathname = path.substring(start)
+        const prettyUrl = new URL(nodePath.join(root, prettyPathname))
+        if (isExclude(prettyUrl.href) || isExclude(srcUrl.href)) return
         let content = null
-        if (findCache(url)) {
+        if (findCache(prettyUrl) || findCache(srcUrl)) {
             content = fs.readFileSync(path, 'utf-8')
-            const key = decodeURIComponent(url.pathname)
+            const key = decodeURIComponent(prettyUrl.pathname)
             result[key] = crypto.createHash('md5').update(content).digest('hex')
         }
         // 外链监控
