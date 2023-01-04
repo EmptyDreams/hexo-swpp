@@ -1,4 +1,4 @@
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
     /** 检查 SW 是否可用 */
     const checkServiceWorker = () => 'serviceWorker' in navigator && navigator.serviceWorker.controller
     /** 发送信息到 sw */
@@ -65,4 +65,4 @@
                 break
         }
     })
-})()
+})
