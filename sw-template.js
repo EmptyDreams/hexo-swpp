@@ -122,13 +122,13 @@
             const dbVersion = {
                 write: (id) => caches.open(CACHE_NAME)
                     .then(cache => cache.put(new Request(VERSION_PATH), new Response(id))),
-                read: () => caches.match(new Request(VERSION_PATH)).then(response => response.json())
+                read: () => caches.match(new Request(VERSION_PATH)).then(response => response?.json())
             }
             let list = new VersionList()
             return dbVersion.read().then(oldVersion => {
-                const {elementList, global} = json
+                const {info, global} = json
                 const escape = '@$$[escape]'
-                const newVersion = {global: global, local: elementList[0].version, escape: escape}
+                const newVersion = {global: global, local: info[0].version, escape: escape}
                 //新用户不进行更新操作
                 if (!oldVersion) {
                     dbVersion.write(JSON.stringify(newVersion))
@@ -136,7 +136,7 @@
                 }
                 // noinspection JSIncompatibleTypesComparison
                 let refresh =
-                    escape !== 0 && escape !== oldVersion.escape ? true : parseChange(list, elementList, oldVersion.local)
+                    escape !== 0 && escape !== oldVersion.escape ? true : parseChange(list, info, oldVersion.local)
                 dbVersion.write(JSON.stringify(newVersion))
                 //如果需要清理全站
                 if (refresh) {
