@@ -31,7 +31,7 @@
         const url = new URL(request.url)
         if (findCache(url)) {
             event.respondWith(new Promise(async resolve => {
-                const key = new Request(`${url.protocol}//${url.host}${url.pathname}`)
+                const key = `${url.protocol}//${url.host}${url.pathname}`
                 let response = await caches.match(key)
                 if (!response) {
                     response = await fetchNoCache(request)
@@ -121,8 +121,8 @@
             /** 版本号读写操作 */
             const dbVersion = {
                 write: (id) => caches.open(CACHE_NAME)
-                    .then(cache => cache.put(new Request(VERSION_PATH), new Response(id))),
-                read: () => caches.match(new Request(VERSION_PATH)).then(response => response?.json())
+                    .then(cache => cache.put(VERSION_PATH, new Response(id))),
+                read: () => caches.match(VERSION_PATH).then(response => response?.json())
             }
             let list = new VersionList()
             return dbVersion.read().then(oldVersion => {
@@ -195,53 +195,50 @@
     /**
      * 缓存更新匹配规则表达式
      * @param json 格式{"flag": ..., "value": ...}
-     * @see https://kmar.top/posts/bcfe8408/#JSON格式
+     * @see https://kmar.top/posts/bcfe8408/#8dbec4f0
+     * @constructor
      */
-    class CacheChangeExpression {
-
-        constructor(json) {
-            const checkCache = url => {
-                const cache = findCache(new URL(url))
-                return !cache || cache.clean
-            }
-            /**
-             * 遍历所有value
-             * @param action {function(string): boolean} 接受value并返回bool的函数
-             * @return {boolean} 如果value只有一个则返回`action(value)`，否则返回所有运算的或运算（带短路）
-             */
-            const forEachValues = action => {
-                const value = json.value
-                if (Array.isArray(value)) {
-                    for (let it of value) {
-                        if (action(it)) return true
-                    }
-                    return false
-                } else return action(value)
-            }
-            switch (json['flag']) {
-                case 'all':
-                    this.match = checkCache
-                    break
-                case 'html':
-                    this.match = url => url.match(/(\/|\/index\.html)$/)
-                    break
-                case 'page':
-                    this.match = url => forEachValues(
-                        value => url.endsWith(`/${value}/`) || url.endsWith(`/${value}/index.html`)
-                    )
-                    break
-                case 'file':
-                    this.match = url => forEachValues(value => url.endsWith(value))
-                    break
-                case 'str':
-                    this.match = url => forEachValues(value => url.includes(value))
-                    break
-                case 'reg':
-                    this.match = url => forEachValues(value => url.match(new RegExp(value, 'i')))
-                    break
-                default: throw `未知表达式：${JSON.stringify(json)}`
-            }
+    function CacheChangeExpression(json) {
+        const checkCache = url => {
+            const cache = findCache(new URL(url))
+            return !cache || cache.clean
         }
-
+        /**
+         * 遍历所有value
+         * @param action {function(string): boolean} 接受value并返回bool的函数
+         * @return {boolean} 如果value只有一个则返回`action(value)`，否则返回所有运算的或运算（带短路）
+         */
+        const forEachValues = action => {
+            const value = json.value
+            if (Array.isArray(value)) {
+                for (let it of value) {
+                    if (action(it)) return true
+                }
+                return false
+            } else return action(value)
+        }
+        switch (json['flag']) {
+            case 'all':
+                this.match = checkCache
+                break
+            case 'html':
+                this.match = url => url.match(/(\/|\/index\.html)$/)
+                break
+            case 'page':
+                this.match = url => forEachValues(
+                    value => url.endsWith(`/${value}/`) || url.endsWith(`/${value}/index.html`)
+                )
+                break
+            case 'file':
+                this.match = url => forEachValues(value => url.endsWith(value))
+                break
+            case 'str':
+                this.match = url => forEachValues(value => url.includes(value))
+                break
+            case 'reg':
+                this.match = url => forEachValues(value => url.match(new RegExp(value, 'i')))
+                break
+            default: throw `未知表达式：${JSON.stringify(json)}`
+        }
     }
 })()
