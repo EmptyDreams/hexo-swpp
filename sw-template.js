@@ -122,11 +122,10 @@
             const dbVersion = {
                 write: (id) => caches.open(CACHE_NAME)
                     .then(cache => cache.put(new Request(VERSION_PATH), new Response(id))),
-                read: () => caches.match(new Request(VERSION_PATH))
+                read: () => caches.match(new Request(VERSION_PATH)).then(response => response.json())
             }
             let list = new VersionList()
-            return dbVersion.read().then(oldData => {
-                const oldVersion = JSON.parse(oldData)
+            return dbVersion.read().then(oldVersion => {
                 const {elementList, global} = json
                 const escape = '@$$[escape]'
                 const newVersion = {global: global, local: elementList[0].version, escape: escape}
@@ -162,7 +161,7 @@
                             }) : {version: result}
                         )
                     )
-                else console.error(`加载 update.json 时遇到异常，状态码：${response.status}`)
+                else throw `加载 update.json 时遇到异常，状态码：${response.status}`
             })
     }
 
