@@ -23,7 +23,7 @@
                 // noinspection ES6MissingAwait,CommaExpressionJS
                 return url !== VERSION_PATH && list.match(url) ? (cache.delete(it), url) : null
             })
-        ))
+        )).then(list => list.filter(it => it))
     )
 
     self.addEventListener('fetch', event => {
@@ -32,19 +32,16 @@
         const replace = replaceRequest(request)
         const url = new URL(request.url)
         if (findCache(url)) {
-            event.respondWith(new Promise(async resolve => {
-                const key = `${url.protocol}//${url.host}${url.pathname}`
-                let response = await caches.match(key)
-                if (!response) {
-                    response = await fetchNoCache(request)
-                    const status = response.status
-                    if ((status > 199 && status < 400) || status === 0) {
+            const key = `${url.protocol}//${url.host}${url.pathname}`
+            event.respondWith(caches.match(key).then(cache =>
+                cache ? cache : fetchNoCache(request).then(response => {
+                    if (response.ok) {
                         const clone = response.clone()
-                        caches.open(CACHE_NAME).then(cache => cache.put(key, clone))
+                        caches.open(CACHE_NAME).then(it => it.put(key, clone))
                     }
-                }
-                resolve(response)
-            }))
+                    return response
+                })
+            ))
         } else if (replace) {
             event.respondWith(fetch(request))
         }
@@ -52,14 +49,14 @@
 
     self.addEventListener('message', event => {
         if (event.data === 'update') {
-            updateJson().then(info => {
+            updateJson().then(info =>
                 // noinspection JSUnresolvedVariable
                 event.source.postMessage({
                     type: 'update',
-                    update: info.update,
+                    update: info.list,
                     version: info.version,
                 })
-            })
+            )
         }
     })
 
@@ -100,7 +97,7 @@
 
     /**
      * 根据JSON删除缓存
-     * @returns {Promise<boolean>} 返回值用于标记当前页是否被刷新
+     * @returns {Promise<{version, list}>}
      */
     function updateJson() {
         /**
@@ -124,7 +121,7 @@
             /** 版本号读写操作 */
             const dbVersion = {
                 write: (id) => caches.open(CACHE_NAME)
-                    .then(cache => cache.put(VERSION_PATH, new Response(id))),
+                    .then(cache => cache.put(VERSION_PATH, new Response(JSON.stringify(id)))),
                 read: () => caches.match(VERSION_PATH).then(response => response?.json())
             }
             let list = new VersionList()
@@ -134,19 +131,18 @@
                 const newVersion = {global: global, local: info[0].version, escape: escape}
                 //新用户不进行更新操作
                 if (!oldVersion) {
-                    dbVersion.write(JSON.stringify(newVersion))
+                    dbVersion.write(newVersion)
                     return newVersion
                 }
                 // noinspection JSIncompatibleTypesComparison
                 let refresh =
                     escape !== 0 && escape !== oldVersion.escape ? true : parseChange(list, info, oldVersion.local)
-                dbVersion.write(JSON.stringify(newVersion))
+                dbVersion.write(newVersion)
                 //如果需要清理全站
                 if (refresh) {
-                    if (global === oldVersion.global) {
-                        list._list.length = 0
-                        list.push(new CacheChangeExpression({'flag': 'all'}))
-                    } else list.refresh = true
+                    if (global === oldVersion.global)
+                        list.clean(new CacheChangeExpression({'flag': 'all'}))
+                    else list.refresh = true
                 }
                 return {list: list, version: newVersion}
             })
@@ -158,7 +154,7 @@
                         parseJson(json).then(result => result.list ?
                             deleteCache(result.list).then(list => {
                                 return {
-                                    update: list.filter(it => it),
+                                    list,
                                     version: result.version
                                 }
                             }) : {version: result}
@@ -168,25 +164,41 @@
             })
     }
 
-    /** 版本列表 */
-    class VersionList {
+    /**
+     * 版本列表
+     * @constructor
+     */
+    function VersionList() {
 
-        _list = []
-        refresh = false
+        const list = []
+        const refresh = false
 
-        push(element) {
-            this._list.push(element)
+        /**
+         * 推送一个表达式
+         * @param element {CacheChangeExpression} 要推送的表达式
+         */
+        this.push = element => {
+            list.push(element)
         }
 
-        clean(element = null) {
-            this._list.length = 0
+        /**
+         * 清除列表，并将指定元素推入列表中
+         * @param element {CacheChangeExpression} 要推入的元素，留空表示不推入
+         */
+        this.clean = element => {
+            list.length = 0
             if (!element) this.push(element)
         }
 
-        match(url) {
-            if (this.refresh) return true
+        /**
+         * 判断指定 URL 是否和某一条规则匹配
+         * @param url {string} URL
+         * @return {boolean}
+         */
+        this.match = url => {
+            if (refresh) return true
             else {
-                for (let it of this._list) {
+                for (let it of list) {
                     if (it.match(url)) return true
                 }
             }
