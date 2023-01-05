@@ -8,6 +8,7 @@
 
     self.addEventListener('install', () => self.skipWaiting())
 
+    // noinspection JSFileReferences
     const { cacheList, replaceList } = require('../sw-cache')
 
     /**
@@ -19,7 +20,8 @@
         .then(keys => Promise.all(
             keys.map(async it => {
                 const url = it.url
-                return url !== VERSION_PATH && list.match(url) ? cache.delete(it) : null
+                // noinspection ES6MissingAwait,CommaExpressionJS
+                return url !== VERSION_PATH && list.match(url) ? (cache.delete(it), url) : null
             })
         ))
     )
@@ -87,6 +89,7 @@
             const value = replaceList[key]
             for (let source of value.source) {
                 if (request.url.match(source)) {
+                    // noinspection JSUnresolvedVariable
                     request.url = request.url.replace(source, value.dist)
                     flag = true
                 }
