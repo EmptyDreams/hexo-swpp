@@ -15,19 +15,14 @@
      * @param list 要删除的缓存列表
      * @return {Promise<Array<string>>} 删除的缓存的URL列表
      */
-    const deleteCache = list => new Promise(resolve => {
-        caches.open(CACHE_NAME).then(cache => cache.keys()
-            .then(keys => Promise.all(keys.map(
-                it => new Promise(async resolve1 => {
-                    const url = it.url
-                    if (url !== VERSION_PATH && list.match(url)) {
-                        await cache.delete(it)
-                        resolve1(url)
-                    } else resolve1(undefined)
-                })
-            )).then(removeList => resolve(removeList)))
-        )
-    })
+    const deleteCache = list => caches.open(CACHE_NAME).then(cache => cache.keys()
+        .then(keys => Promise.all(
+            keys.map(async it => {
+                const url = it.url
+                return url !== VERSION_PATH && list.match(url) ? cache.delete(it) : null
+            })
+        ))
+    )
 
     self.addEventListener('fetch', event => {
         const request = event.request
@@ -54,26 +49,15 @@
     })
 
     self.addEventListener('message', event => {
-        const data = event.data
-        switch (data) {
-            case 'update':
-                updateJson().then(info => {
-                    // noinspection JSUnresolvedVariable
-                    event.source.postMessage({
-                        type: 'update',
-                        update: info.update,
-                        version: info.version,
-                    })
+        if (event.data === 'update') {
+            updateJson().then(info => {
+                // noinspection JSUnresolvedVariable
+                event.source.postMessage({
+                    type: 'update',
+                    update: info.update,
+                    version: info.version,
                 })
-                break
-            default:
-                const list = new VersionList()
-                list.push(new CacheChangeExpression({'flag': 'all'}))
-                deleteCache(list).then(() => {
-                    if (data === 'refresh')
-                        event.source.postMessage({type: 'refresh'})
-                })
-                break
+            })
         }
     })
 
@@ -120,58 +104,40 @@
          * 解析elements，并把结果输出到list中
          * @return boolean 是否刷新全站缓存
          */
-        const parseChange = (list, elements, version) => {
-            let result = true
+        const parseChange = (list, elements, ver) => {
             for (let element of elements) {
-                const ver = element['version']
-                if (ver === version) {
-                    result = false
-                    break
-                }
-                const jsonList = element['change']
-                if (jsonList) {
-                    for (let it of jsonList)
+                const {version, change} = element
+                if (version === ver) return false
+                if (change) {
+                    for (let it of change)
                         list.push(new CacheChangeExpression(it))
                 }
             }
-            // resul=true时表明读取了已存在的所有版本信息后依然没有找到客户端当前的版本号
-            // 说明跨版本幅度过大，直接清理全站
-            return result
+            // 跨版本幅度过大，直接清理全站
+            return true
         }
         /** 解析字符串 */
-        const parseJson = json => new Promise(resolve => {
+        const parseJson = json => {
             /** 版本号读写操作 */
             const dbVersion = {
-                write: (id) => new Promise((resolve, reject) => {
-                    caches.open(CACHE_NAME).then(function (cache) {
-                        cache.put(
-                            new Request(VERSION_PATH),
-                            new Response(id)
-                        ).then(() => resolve())
-                    }).catch(() => reject())
-                }), read: () => new Promise((resolve) => {
-                    caches.match(new Request(VERSION_PATH))
-                        .then(response => {
-                            if (!response) resolve(null)
-                            response.text().then(text => {
-                                resolve(text)
-                            })
-                        }).catch(() => resolve(null)
-                    )
-                })
+                write: (id) => caches.open(CACHE_NAME)
+                    .then(cache => cache.put(new Request(VERSION_PATH), new Response(id))),
+                read: () => caches.match(new Request(VERSION_PATH))
             }
             let list = new VersionList()
-            dbVersion.read().then(oldData => {
+            return dbVersion.read().then(oldData => {
                 const oldVersion = JSON.parse(oldData)
-                const elementList = json['info']
-                const global = json['global']
-                const newVersion = {global: global, local: elementList[0].version}
+                const {elementList, global} = json
+                const escape = '@$$[escape]'
+                const newVersion = {global: global, local: elementList[0].version, escape: escape}
                 //新用户不进行更新操作
                 if (!oldVersion) {
                     dbVersion.write(JSON.stringify(newVersion))
-                    return resolve(newVersion)
+                    return newVersion
                 }
-                const refresh = oldVersion.local < '@$$[escape]' ? true : parseChange(list, elementList, oldVersion.local)
+                // noinspection JSIncompatibleTypesComparison
+                let refresh =
+                    escape !== 0 && escape !== oldVersion.escape ? true : parseChange(list, elementList, oldVersion.local)
                 dbVersion.write(JSON.stringify(newVersion))
                 //如果需要清理全站
                 if (refresh) {
@@ -180,30 +146,24 @@
                         list.push(new CacheChangeExpression({'flag': 'all'}))
                     } else list.refresh = true
                 }
-                resolve({list: list, version: newVersion})
-            }).catch(e => {
-                console.error(e)
-                console.error('更新过程中发生异常，已经还原版本信息！')
-                dbVersion.write('{"global":-1, "local": -1}')
+                return {list: list, version: newVersion}
             })
-        })
-        const url = `/update.json` //需要修改JSON地址的在这里改
-        return new Promise(resolve => fetchNoCache(url)
+        }
+        return fetchNoCache(`/update.json`)
             .then(response => {
                 if (response.ok || response.status === 301 || response.status === 302)
-                    response.json().then(json => {
-                        parseJson(json).then(result => {
-                            if (!result.list) return resolve({version: result})
-                            deleteCache(result.list).then(list => resolve({
+                    return response.json().then(json =>
+                        parseJson(json).then(result => result.list ?
+                            deleteCache(result.list).then(list => {
+                                return {
                                     update: list.filter(it => it),
                                     version: result.version
-                                })
-                            )
-                        })
-                    })
+                                }
+                            }) : {version: result}
+                        )
+                    )
                 else console.error(`加载 update.json 时遇到异常，状态码：${response.status}`)
             })
-        )
     }
 
     /** 版本列表 */
