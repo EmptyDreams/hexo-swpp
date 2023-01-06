@@ -161,7 +161,7 @@ const buildNewJson = path => new Promise(resolve => {
             const url = new URL(link.startsWith('/') ? `http:${link}` : link)
             if (url.hostname === domain || !findCache(url) || isExclude(url.href)) return
             if (isSkipFetch(url.href)) result[decodeURIComponent(link)] = '0'
-            taskList.push(
+            else taskList.push(
                 fetchFile(link)
                     .then(response => response.text())
                     .then(text => {
@@ -229,7 +229,7 @@ const buildNewJson = path => new Promise(resolve => {
         }
     })
     Promise.all(taskList).then(() => {
-        const publicRoot = config.public_dir || 'public/'
+        const publicRoot = config.public_dir
         fs.writeFileSync(nodePath.join(publicRoot, path), JSON.stringify(result), 'utf-8')
         logger.info(`Generated: ${path}`)
         resolve(result)
