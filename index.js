@@ -43,7 +43,8 @@ if (pluginConfig?.enable) {
             .replaceAll('module.exports.replaceList', 'const replaceList')
         const swContent = fs.readFileSync(relativePath, 'utf8')
             .replaceAll('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
-            .replaceAll("'@$$[escape]'", (pluginConfig.escape ?? 0).toString())
+            .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
+            .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
         return {
             path: 'sw.js',
             data: swContent

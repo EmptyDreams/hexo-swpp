@@ -2,7 +2,7 @@
 
 (() => {
     /** 缓存库名称 */
-    const CACHE_NAME = 'kmarBlogCache'
+    const CACHE_NAME = '@$$[cacheName]'
     /** 版本名称存储地址（必须以`/`结尾） */
     const VERSION_PATH = 'https://id.v3/'
 
