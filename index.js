@@ -40,9 +40,9 @@ if (pluginConfig?.enable) {
         const relativePath = nodePath.relative(rootPath, absPath)
         const cache = fs.readFileSync('sw-cache.js', 'utf8')
             .replaceAll('module.exports.cacheList', 'const cacheList')
-            .replaceAll('module.exports.replaceList', 'const replaceList')
+            .replaceAll('module.exports.modifyRequest', 'const modifyRequest')
         const swContent = fs.readFileSync(relativePath, 'utf8')
-            .replaceAll('const { cacheList, replaceList } = require(\'../sw-cache\')', cache)
+            .replaceAll("const { cacheList, modifyRequest } = require('../sw-cache')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
             .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
         return {
