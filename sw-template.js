@@ -9,7 +9,7 @@
     self.addEventListener('install', () => self.skipWaiting())
 
     // noinspection JSFileReferences
-    const { cacheList, replaceList } = require('../sw-cache')
+    const { cacheList, modifyRequest } = require('../sw-cache')
 
     /**
      * 删除指定缓存
@@ -29,7 +29,7 @@
     self.addEventListener('fetch', event => {
         const request = event.request
         if (request.method !== 'GET') return
-        const replace = replaceRequest(request)
+        const edit = modifyRequest(request)
         const url = new URL(request.url)
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
@@ -42,7 +42,7 @@
                     return response
                 })
             ))
-        } else if (replace) {
+        } else if (edit) {
             event.respondWith(fetch(request))
         }
     })
@@ -70,29 +70,6 @@
             if (value.match(url)) return value
         }
         return null
-    }
-
-    /**
-     * 检查连接是否需要重定向至另外的链接，如果需要则返回新的Request，否则返回null<br/>
-     * 该函数会顺序匹配{@link replaceList}中的所有项目，即使已经有可用的替换项<br/>
-     * 故该函数允许重复替换，例如：<br/>
-     * 如果第一个匹配项把链接由"http://abc.com/"改为了"https://abc.com/"<br/>
-     * 此时第二个匹配项可以以此为基础继续进行修改，替换为"https://abc.net/"<br/>
-     * @return {boolean} 是否进行了替换
-     */
-    function replaceRequest(request) {
-        let flag = false
-        for (let key in replaceList) {
-            const value = replaceList[key]
-            for (let source of value.source) {
-                if (request.url.match(source)) {
-                    // noinspection JSUnresolvedVariable
-                    request.url = request.url.replace(source, value.dist)
-                    flag = true
-                }
-            }
-        }
-        return flag
     }
 
     /**
