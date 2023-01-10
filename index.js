@@ -16,7 +16,7 @@ const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
 const root = config.url + (config.root ?? '/')
 const domain = new URL(root).hostname
-const { cacheList, replaceList } = pluginConfig?.enable ? require(findScript()) : undefined
+const { cacheList, modifyRequest } = pluginConfig?.enable ? require(findScript()) : undefined
 
 if (pluginConfig?.enable) {
     // 生成 update.json
@@ -517,15 +517,9 @@ function findCache(url) {
 }
 
 function replaceRequest(url) {
-    for (let key in replaceList) {
-        const value = replaceList[key]
-        for (let source of value.source) {
-            if (url.match(source)) {
-                url = url.replace(source, value.dist)
-            }
-        }
-    }
-    return url
+    const request = new Request(url)
+    const edit = modifyRequest(request)
+    return edit ? request.url : url
 }
 
 function replaceDevRequest(url) {
