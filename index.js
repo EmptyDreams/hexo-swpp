@@ -45,6 +45,7 @@ if (pluginConfig?.enable) {
             if (pluginConfig.sw.cdnRacing && getUrlList) {
                 cache +=`
                     const fetchNoCache = request => {
+                        if (typeof request === 'string') return
                         // noinspection JSUnresolvedFunction
                         const list = getUrlList(request.url)
                         if (!list) return fetch(request, {cache: "no-store"})
@@ -60,7 +61,7 @@ if (pluginConfig?.enable) {
                                 cache: "no-store",
                                 signal: controller.signal
                             }).then(response => {
-                                if (response.status === 200 || response.status === 301 || response.status === 302) {
+                                if (response.ok || response.status === 301 || response.status === 302) {
                                     controller.abort()
                                     return response
                                 }
