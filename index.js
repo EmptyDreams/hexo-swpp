@@ -45,7 +45,7 @@ if (pluginConfig?.enable) {
             if (pluginConfig.sw.cdnRacing && getUrlList) {
                 cache +=`
                     const fetchNoCache = request => {
-                        if (typeof request === 'string') return
+                        if (typeof request === 'string') return fetch(request, {cache: "no-store"})
                         // noinspection JSUnresolvedFunction
                         const list = getUrlList(request.url)
                         if (!list) return fetch(request, {cache: "no-store"})
