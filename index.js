@@ -73,7 +73,7 @@ if (pluginConfig?.enable) {
             } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
         }
         const swContent = fs.readFileSync(relativePath, 'utf8')
-            .replaceAll("const { cacheList, modifyRequest } = require('../sw-cache')", cache)
+            .replaceAll("const { cacheList, modifyRequest, fetchNoCache } = require('../sw-cache')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
             .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
         return {
