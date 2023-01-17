@@ -40,8 +40,7 @@ if (pluginConfig?.enable) {
         const relativePath = nodePath.relative(rootPath, absPath)
         // 获取拓展文件
         let cache = fs.readFileSync('sw-cache.js', 'utf8')
-            .replaceAll('module.exports.cacheList', 'const cacheList')
-            .replaceAll('module.exports.modifyRequest', 'const modifyRequest')
+            .replaceAll('module.exports.', 'const ')
         if (!fetchNoCache) {
             if (pluginConfig.sw.cdnRacing && getUrlList) {
                 cache +=`
