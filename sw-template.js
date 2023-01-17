@@ -9,7 +9,7 @@
     self.addEventListener('install', () => self.skipWaiting())
 
     // noinspection JSFileReferences
-    const { cacheList, modifyRequest } = require('../sw-cache')
+    const { cacheList, modifyRequest, fetchNoCache } = require('../sw-cache')
 
     /**
      * 删除指定缓存
@@ -59,9 +59,6 @@
             )
         }
     })
-
-    /** 忽略浏览器HTTP缓存的请求指定request */
-    const fetchNoCache = request => fetch(request, {cache: "no-store"})
 
     /** 判断指定url击中了哪一种缓存，都没有击中则返回null */
     function findCache(url) {

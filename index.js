@@ -16,7 +16,7 @@ const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
 const root = config.url + (config.root ?? '/')
 const domain = new URL(root).hostname
-const { cacheList, modifyRequest } = pluginConfig?.enable ? require(findScript()) : undefined
+const { cacheList, modifyRequest, fetchNoCache, getUrlList } = pluginConfig?.enable ? require(findScript()) : undefined
 
 if (pluginConfig?.enable) {
     // 生成 update.json
@@ -38,9 +38,40 @@ if (pluginConfig?.enable) {
         const absPath = module.path + '/sw-template.js'
         const rootPath = nodePath.resolve('./')
         const relativePath = nodePath.relative(rootPath, absPath)
-        const cache = fs.readFileSync('sw-cache.js', 'utf8')
+        // 获取拓展文件
+        let cache = fs.readFileSync('sw-cache.js', 'utf8')
             .replaceAll('module.exports.cacheList', 'const cacheList')
             .replaceAll('module.exports.modifyRequest', 'const modifyRequest')
+        if (!fetchNoCache) {
+            if (pluginConfig.sw.cdnRacing && getUrlList) {
+                cache +=`
+                    const fetchNoCache = request => {
+                        // noinspection JSUnresolvedFunction
+                        const list = getUrlList(request.url)
+                        if (!list) return fetch(request, {cache: "no-store"})
+                        const res = list.map(url => {
+                            const cpy = request.clone()
+                            cpy.url = url
+                            return cpy
+                        })
+                        res.push(request)
+                        const controller = new AbortController()
+                        return Promise.any(res.map(
+                            it => fetch(it, {
+                                cache: "no-store",
+                                signal: controller.signal
+                            }).then(response => {
+                                if (response.status === 200 || response.status === 301 || response.status === 302) {
+                                    controller.abort()
+                                    return response
+                                }
+                                return Promise.reject()
+                            })
+                        ))
+                    }
+                `
+            } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
+        }
         const swContent = fs.readFileSync(relativePath, 'utf8')
             .replaceAll("const { cacheList, modifyRequest } = require('../sw-cache')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
