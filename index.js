@@ -47,7 +47,7 @@ if (pluginConfig?.enable) {
                     const fetchNoCache = request => {
                         // noinspection JSUnresolvedFunction
                         const list = getUrlList(request.url)
-                        if (!list) return fetch(request, {cache: "no-store"})
+                        if (!list || !Promise.any) return fetch(request, {cache: "no-store"})
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
                         return Promise.any(res.map(
@@ -65,6 +65,7 @@ if (pluginConfig?.enable) {
                 `
             } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
         }
+        if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         const swContent = fs.readFileSync(relativePath, 'utf8')
             .replaceAll("const { cacheList, modifyRequest, fetchNoCache } = require('../sw-cache')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
@@ -541,9 +542,10 @@ function findCache(url) {
 }
 
 function replaceRequest(url) {
+    if (!modifyRequest) return url
     const request = new Request(url)
-    const edit = modifyRequest(request)
-    return edit ? request.url : url
+    const newRequest = modifyRequest(request)
+    return newRequest?.url ?? url
 }
 
 function replaceDevRequest(url) {
