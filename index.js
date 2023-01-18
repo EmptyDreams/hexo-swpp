@@ -91,10 +91,8 @@ if (pluginConfig?.enable) {
                             fetch(new Request(list[flag - 1], request)).then(response => {
                                 if (response.status < 303) {
                                     for (let i in controllers) {
-                                        if (i !== flag) {
-                                            controllers[i].ctrl.abort()
-                                            clearTimeout(controllers[i].id)
-                                        }
+                                        if (i !== flag) controllers[i].ctrl.abort()
+                                        clearTimeout(controllers[i].id)
                                     }
                                     resolve(response)
                                 } else plusError()
