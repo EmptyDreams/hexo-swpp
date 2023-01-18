@@ -52,7 +52,7 @@ if (pluginConfig?.enable) {
                 cache +=`
                     const fetchFile = (request, banCache) => {
                         const list = getCdnList(request.url)
-                        if (!list || !Promise.any) return fetch(request, {cache: banCache ? 'no-store' : ''})
+                        if (!list || !Promise.any) return fetch(request, {cache: banCache ? 'no-store' : 'default'})
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
                         return Promise.any(res.map(
@@ -73,7 +73,7 @@ if (pluginConfig?.enable) {
                     const fetchFile = (request, banCache, spare = null) => new Promise((resolve, reject) =>  {
                         if (!spare)
                             spare = getSpareUrls(request.url)
-                        if (!spare) return fetch(request, {cache: banCache ? 'no-store' : ''})
+                        if (!spare) return fetch(request, {cache: banCache ? 'no-store' : 'default'})
                         const list = spare.list
                         const controllers = []
                         let index = 0
@@ -103,7 +103,7 @@ if (pluginConfig?.enable) {
                         pull()
                     })
                 `
-            } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : ""})'
+            } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : "default"})'
         }
         if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         const swContent = fs.readFileSync(relativePath, 'utf8')
