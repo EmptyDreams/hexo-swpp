@@ -9,7 +9,7 @@
     self.addEventListener('install', () => self.skipWaiting())
 
     // noinspection JSFileReferences
-    const { cacheList, modifyRequest, fetchNoCache } = require('../sw-cache')
+    const { cacheList, modifyRequest, fetchNoCache } = require('../sw-rules')
 
     /**
      * 删除指定缓存
