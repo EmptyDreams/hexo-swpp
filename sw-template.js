@@ -35,7 +35,7 @@
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
                 cache ? cache : fetchNoCache(request).then(response => {
-                    if (response.ok) {
+                    if (response.status < 303) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
                     }
@@ -121,7 +121,7 @@
                 return {list: list, version: newVersion}
             })
         }
-        return fetchNoCache(`/update.json`)
+        return fetchNoCache(new Request('/update.json'))
             .then(response => {
                 if (response.ok || response.status === 301 || response.status === 302)
                     return response.json().then(json =>

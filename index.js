@@ -45,29 +45,22 @@ if (pluginConfig?.enable) {
             if (pluginConfig.sw.cdnRacing && getUrlList) {
                 cache +=`
                     const fetchNoCache = request => {
-                        if (typeof request === 'string') return fetch(request, {cache: "no-store"})
                         // noinspection JSUnresolvedFunction
                         const list = getUrlList(request.url)
                         if (!list) return fetch(request, {cache: "no-store"})
-                        const res = list.map(url => {
-                            const cpy = request.clone()
-                            cpy.url = url
-                            return cpy
-                        })
-                        res.push(request)
-                        const controller = new AbortController()
+                        const res = list.map(url => new Request(url, request))
+                        const controllers = []
                         return Promise.any(res.map(
-                            it => fetch(it, {
+                            (it, index) => fetch(it, {
                                 cache: "no-store",
-                                signal: controller.signal
-                            }).then(response => {
-                                if (response.ok || response.status === 301 || response.status === 302) {
-                                    controller.abort()
-                                    return response
-                                }
-                                return Promise.reject()
-                            })
-                        ))
+                                signal: (controllers[index] = new AbortController()).signal
+                            }).then(response => response.status < 303 ? {index, response} : Promise.reject())
+                        )).then(it => {
+                            for (let i in controllers) {
+                                if (i != it.index) controllers[i].abort()
+                            }
+                            return it.response
+                        })
                     }
                 `
             } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
