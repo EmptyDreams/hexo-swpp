@@ -10,7 +10,7 @@ const crypto = require("crypto")
 const cheerio = require('cheerio')
 const postcss = require('postcss')
 
-const findScript = () => nodePath.resolve('./', 'sw-cache')
+const findScript = () => nodePath.resolve('./', 'sw-rules')
 
 const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
@@ -39,7 +39,7 @@ if (pluginConfig?.enable) {
         const rootPath = nodePath.resolve('./')
         const relativePath = nodePath.relative(rootPath, absPath)
         // 获取拓展文件
-        let cache = fs.readFileSync('sw-cache.js', 'utf8')
+        let cache = fs.readFileSync('sw-rules.js', 'utf8')
             .replaceAll('module.exports.', 'const ')
         if (!fetchNoCache) {
             if (pluginConfig.sw.cdnRacing && getUrlList) {
@@ -67,7 +67,7 @@ if (pluginConfig?.enable) {
         }
         if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         const swContent = fs.readFileSync(relativePath, 'utf8')
-            .replaceAll("const { cacheList, modifyRequest, fetchNoCache } = require('../sw-cache')", cache)
+            .replaceAll("const { cacheList, modifyRequest, fetchNoCache } = require('../sw-rules')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
             .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
         return {
