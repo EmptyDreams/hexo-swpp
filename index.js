@@ -16,7 +16,13 @@ const config = hexo.config
 const pluginConfig = config.swpp || hexo.theme.config
 const root = config.url + (config.root ?? '/')
 const domain = new URL(root).hostname
-const { cacheList, modifyRequest, fetchNoCache, getUrlList } = pluginConfig?.enable ? require(findScript()) : undefined
+const {
+    cacheList,
+    modifyRequest,
+    fetchNoCache,
+    getCdnList,
+    getSpareUrls
+} = pluginConfig?.enable ? require(findScript()) : {}
 
 if (pluginConfig?.enable) {
     // 生成 update.json
@@ -42,11 +48,10 @@ if (pluginConfig?.enable) {
         let cache = fs.readFileSync('sw-rules.js', 'utf8')
             .replaceAll('module.exports.', 'const ')
         if (!fetchNoCache) {
-            if (pluginConfig.sw.cdnRacing && getUrlList) {
+            if (pluginConfig.sw.cdnRacing && getCdnList) {
                 cache +=`
                     const fetchNoCache = request => {
-                        // noinspection JSUnresolvedFunction
-                        const list = getUrlList(request.url)
+                        const list = getCdnList(request.url)
                         if (!list || !Promise.any) return fetch(request, {cache: "no-store"})
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
@@ -62,6 +67,41 @@ if (pluginConfig?.enable) {
                             return it.response
                         })
                     }
+                `
+            } else if (pluginConfig.sw.spareUrl && getSpareUrls) {
+                cache += `
+                    const fetchNoCache = request => new Promise((resolve, reject) =>  {
+                        // noinspection JSUnresolvedFunction
+                        const spare = getSpareUrls(request.url)
+                        if (!spare) return fetch(request, {cache: 'no-store'})
+                        const list = spare.list
+                        const controllers = []
+                        let index = 0
+                        let error = 0
+                        const plusError = () => {
+                            if (++error === list.length) reject(\`请求 ${request.url} 失败\`)
+                        }
+                        const pull = () => {
+                            if (index === list.length) return
+                            const flag = ++index
+                            controllers.push({
+                                ctrl: new AbortController(),
+                                id: setTimeout(pull, spare.timeout)
+                            })
+                            fetch(new Request(list[flag - 1], request)).then(response => {
+                                if (response.status < 303) {
+                                    for (let i in controllers) {
+                                        if (i !== flag) {
+                                            controllers[i].ctrl.abort()
+                                            clearTimeout(controllers[i].id)
+                                        }
+                                    }
+                                    resolve(response)
+                                } else plusError()
+                            }).catch(plusError)
+                        }
+                        pull()
+                    })
                 `
             } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
         }
