@@ -70,7 +70,7 @@ if (pluginConfig?.enable) {
                 `
             } else if (pluginConfig.sw.spareUrl && getSpareUrls) {
                 cache += `
-                    const fetchFile = (request, banCache, spare = null) => new Promise((resolve, reject) =>  {
+                    const fetchFile = (request, banCache, spare = null) => {
                         if (!spare)
                             spare = getSpareUrls(request.url)
                         if (!spare) return fetch(request, {cache: banCache ? 'no-store' : 'default'})
@@ -78,28 +78,30 @@ if (pluginConfig?.enable) {
                         const controllers = []
                         let index = 0
                         let error = 0
-                        const plusError = () => {
-                            if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
-                        }
-                        const pull = () => {
-                            if (index === list.length) return
-                            const flag = ++index
-                            controllers.push({
-                                ctrl: new AbortController(),
-                                id: setTimeout(pull, spare.timeout)
-                            })
-                            fetch(new Request(list[flag - 1], request)).then(response => {
-                                if (response.status < 303) {
-                                    for (let i in controllers) {
-                                        if (i !== flag) controllers[i].ctrl.abort()
-                                        clearTimeout(controllers[i].id)
-                                    }
-                                    resolve(response)
-                                } else plusError()
-                            }).catch(plusError)
-                        }
-                        pull()
-                    })
+                        return new Promise((resolve, reject) => {
+                            const plusError = () => {
+                                if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
+                            }
+                            const pull = () => {
+                                if (index === list.length) return
+                                const flag = ++index
+                                controllers.push({
+                                    ctrl: new AbortController(),
+                                    id: setTimeout(pull, spare.timeout)
+                                })
+                                fetch(new Request(list[flag - 1], request)).then(response => {
+                                    if (response.status < 303) {
+                                        for (let i in controllers) {
+                                            if (i !== flag) controllers[i].ctrl.abort()
+                                            clearTimeout(controllers[i].id)
+                                        }
+                                        resolve(response)
+                                    } else plusError()
+                                }).catch(plusError)
+                            }
+                            pull()
+                        })
+                    }
                 `
             } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : "default"})'
         }
