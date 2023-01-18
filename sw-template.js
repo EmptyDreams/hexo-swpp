@@ -27,14 +27,14 @@
     )
 
     self.addEventListener('fetch', event => {
-        const request = event.request
+        let request = event.request
         if (request.method !== 'GET') return
-        const edit = modifyRequest(request)
-        const url = new URL(request.url)
+        const newRequest = modifyRequest(request) || request
+        const url = new URL(newRequest.url)
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
-                cache ? cache : fetchNoCache(request).then(response => {
+                cache ? cache : fetchNoCache(newRequest).then(response => {
                     if (response.status < 303) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
@@ -42,8 +42,8 @@
                     return response
                 })
             ))
-        } else if (edit) {
-            event.respondWith(fetch(request))
+        } else if (newRequest !== request) {
+            event.respondWith(fetch(newRequest))
         }
     })
 
