@@ -50,9 +50,9 @@ if (pluginConfig?.enable) {
         if (!fetchNoCache) {
             if (pluginConfig.sw.cdnRacing && getCdnList) {
                 cache +=`
-                    const fetchNoCache = request => {
+                    const fetchFile = (request, banCache) => {
                         const list = getCdnList(request.url)
-                        if (!list || !Promise.any) return fetch(request, {cache: "no-store"})
+                        if (!list || !Promise.any) return fetch(request, {cache: banCache ? 'no-store' : ''})
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
                         return Promise.any(res.map(
@@ -70,16 +70,16 @@ if (pluginConfig?.enable) {
                 `
             } else if (pluginConfig.sw.spareUrl && getSpareUrls) {
                 cache += `
-                    const fetchNoCache = request => new Promise((resolve, reject) =>  {
-                        // noinspection JSUnresolvedFunction
-                        const spare = getSpareUrls(request.url)
-                        if (!spare) return fetch(request, {cache: 'no-store'})
+                    const fetchFile = (request, banCache, spare = null) => new Promise((resolve, reject) =>  {
+                        if (!spare)
+                            spare = getSpareUrls(request.url)
+                        if (!spare) return fetch(request, {cache: banCache ? 'no-store' : ''})
                         const list = spare.list
                         const controllers = []
                         let index = 0
                         let error = 0
                         const plusError = () => {
-                            if (++error === list.length) reject(\`请求 ${request.url} 失败\`)
+                            if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
                         }
                         const pull = () => {
                             if (index === list.length) return
@@ -103,11 +103,11 @@ if (pluginConfig?.enable) {
                         pull()
                     })
                 `
-            } else cache += '\nconst fetchNoCache = request => fetch(request, {cache: "no-store"})'
+            } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : ""})'
         }
         if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         const swContent = fs.readFileSync(relativePath, 'utf8')
-            .replaceAll("const { cacheList, modifyRequest, fetchNoCache } = require('../sw-rules')", cache)
+            .replaceAll("const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
             .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
         return {

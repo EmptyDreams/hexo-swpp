@@ -9,7 +9,7 @@
     self.addEventListener('install', () => self.skipWaiting())
 
     // noinspection JSFileReferences
-    const { cacheList, modifyRequest, fetchNoCache } = require('../sw-rules')
+    const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')
 
     /**
      * 删除指定缓存
@@ -34,7 +34,7 @@
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
-                cache ? cache : fetchNoCache(newRequest).then(response => {
+                cache ? cache : fetchFile(newRequest, true).then(response => {
                     if (response.status < 303) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
@@ -42,8 +42,10 @@
                     return response
                 })
             ))
-        } else if (newRequest !== request) {
-            event.respondWith(fetch(newRequest))
+        } else {
+            const spare = getSpareUrls(newRequest.url)
+            if (spare) event.respondWith(fetchFile(newRequest, false, spare))
+            else if (newRequest !== request) event.respondWith(fetch(newRequest))
         }
     })
 
@@ -121,7 +123,7 @@
                 return {list: list, version: newVersion}
             })
         }
-        return fetchNoCache(new Request('/update.json'))
+        return fetchFile(new Request('/update.json'), false)
             .then(response => {
                 if (response.ok || response.status === 301 || response.status === 302)
                     return response.json().then(json =>
