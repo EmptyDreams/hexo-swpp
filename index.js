@@ -71,30 +71,28 @@ if (pluginConfig?.enable) {
             } else if (pluginConfig.sw.spareUrl && getSpareUrls) {
                 cache += `
                     const fetchFile = (request, banCache, spare = null) => {
-                        if (!spare)
-                            spare = getSpareUrls(request.url)
+                        if (!spare) spare = getSpareUrls(request.url)
                         if (!spare) return fetch(request, {cache: banCache ? 'no-store' : 'default'})
                         const list = spare.list
                         const controllers = []
-                        let index = 0
                         let error = 0
                         return new Promise((resolve, reject) => {
                             const plusError = () => {
                                 if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
                             }
                             const pull = () => {
-                                if (index === list.length) return
-                                const flag = ++index
+                                const flag = controllers.length
+                                if (flag === list.length) return
                                 controllers.push({
                                     ctrl: new AbortController(),
                                     id: setTimeout(pull, spare.timeout)
                                 })
-                                fetch(new Request(list[flag - 1], request)).then(response => {
+                                fetch(new Request(list[flag], request)).then(response => {
                                     if (response.status < 303) {
                                         for (let i in controllers) {
                                             if (i !== flag) controllers[i].ctrl.abort()
-                                            clearTimeout(controllers[i].id)
                                         }
+                                        clearTimeout(controllers[controllers.length - 1].id)
                                         resolve(response)
                                     } else plusError()
                                 }).catch(plusError)
