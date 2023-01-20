@@ -104,6 +104,7 @@ if (pluginConfig?.enable) {
             } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : "default"})'
         }
         if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
+        if (!getSpareUrls) cache += `\nconst getSpareUrls = _ => {}`
         const swContent = fs.readFileSync(relativePath, 'utf8')
             .replaceAll("const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())

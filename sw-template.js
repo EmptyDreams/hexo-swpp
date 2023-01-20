@@ -29,7 +29,8 @@
     self.addEventListener('fetch', event => {
         let request = event.request
         if (request.method !== 'GET') return
-        const newRequest = modifyRequest(request) || request
+        const modify = modifyRequest(request)
+        const newRequest = modify ?? request
         const url = new URL(newRequest.url)
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
@@ -45,7 +46,7 @@
         } else {
             const spare = getSpareUrls(newRequest.url)
             if (spare) event.respondWith(fetchFile(newRequest, false, spare))
-            else if (newRequest !== request) event.respondWith(fetch(newRequest))
+            else if (modify) event.respondWith(fetch(newRequest))
         }
     })
 
