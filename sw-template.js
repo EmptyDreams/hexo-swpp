@@ -3,8 +3,8 @@
 (() => {
     /** 缓存库名称 */
     const CACHE_NAME = '@$$[cacheName]'
-    /** 版本名称存储地址（必须以`/`结尾） */
-    const VERSION_PATH = 'https://id.v3/'
+    /** 控制信息存储地址（必须以`/`结尾） */
+    const CTRL_PATH = 'https://id.v3/'
 
     self.addEventListener('install', () => self.skipWaiting())
 
@@ -21,7 +21,7 @@
             keys.map(async it => {
                 const url = it.url
                 // noinspection ES6MissingAwait,CommaExpressionJS
-                return url !== VERSION_PATH && list.match(url) ? (cache.delete(it), url) : null
+                return url !== CTRL_PATH && list.match(url) ? (cache.delete(it), url) : null
             })
         )).then(list => list.filter(it => it))
     )
@@ -95,17 +95,17 @@
         }
         /** 解析字符串 */
         const parseJson = json => {
-            /** 版本号读写操作 */
+            /** 控制信息读写操作 */
             const dbVersion = {
                 write: (id) => caches.open(CACHE_NAME)
-                    .then(cache => cache.put(VERSION_PATH, new Response(JSON.stringify(id)))),
-                read: () => caches.match(VERSION_PATH).then(response => response?.json())
+                    .then(cache => cache.put(CTRL_PATH, new Response(JSON.stringify(id)))),
+                read: () => caches.match(CTRL_PATH).then(response => response?.json())
             }
             let list = new VersionList()
             return dbVersion.read().then(oldVersion => {
                 const {info, global} = json
                 const escape = '@$$[escape]'
-                const newVersion = {global: global, local: info[0].version, escape: escape}
+                const newVersion = {global, local: info[0].version, escape}
                 //新用户不进行更新操作
                 if (!oldVersion) {
                     dbVersion.write(newVersion)
