@@ -25,6 +25,37 @@ const {
 } = pluginConfig?.enable ? require(findScript()) : {}
 
 if (pluginConfig?.enable) {
+    // 排序
+    (() => {
+        const compare = (a, b) => {
+            const result = a.length === b.length ? a < b : a.length < b.length
+            return result ? -1 : 1
+        }
+        const sort = (obj, value) => obj.data.sort((a, b) => compare(a[value], b[value]))
+        const list = {
+            posts: 'title',
+            pages: 'title',
+            tags: 'name',
+            categories: 'name'
+        }
+        require(`${nodePath.resolve('./', 'node_modules/hexo/lib/hexo/locals')}`).prototype.get = function(name) {
+            if (typeof name !== 'string') throw new TypeError('name must be a string!')
+            return this.cache.apply(name, () => {
+                const getter = this.getters[name]
+                if (!getter) return
+                const result = getter()
+                if (name in list) sort(result, list[name])
+                if (name === 'posts') {
+                    result.forEach(it => {
+                        it.tags.data.sort((a, b) => compare(a.name, b.name))
+                        it.categories.data.sort((a, b) => compare(a.name, b.name))
+                    })
+                }
+                return result
+            })
+        }
+    })()
+
     // 生成 update.json
     hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件以及相关缓存', {}, async () => {
         if (!fs.existsSync(config.public_dir))
@@ -599,21 +630,3 @@ function replaceDevRequest(url) {
     }
     return url
 }
-
-/** 对 hexo 的全局变量进行排序，以保证每次生成的结果一致 */
-(() => {
-    const locals = hexo.locals
-    const compare = (a, b) => a < b ? -1 : 1
-    const sort = (name, value) => locals.get(name).data.sort((a, b) => compare(a[value], b[value]))
-    const list = {
-        posts: 'title',
-        pages: 'title',
-        tags: 'name',
-        categories: 'name'
-    }
-    for (let key in list) sort(key, list[key])
-    locals.get('posts').forEach(it => {
-        it.tags.data.sort((a, b) => compare(a.name, b.name))
-        it.categories.data.sort((a, b) => compare(a.name, b.name))
-    })
-})()
