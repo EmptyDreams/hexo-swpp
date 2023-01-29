@@ -31,7 +31,13 @@ if (pluginConfig?.enable) {
             const result = a.length === b.length ? a < b : a.length < b.length
             return result ? -1 : 1
         }
-        const sort = (obj, value) => obj?.data?.sort((a, b) => compare(a[value], b[value]))
+        const sort = (obj, value) => {
+            if (!obj) return
+            const target = obj.data ?? obj
+            if (!target.sort) return
+            if (value !== false) target.sort((a, b) => compare(a[value], b[value]))
+            else target.sort(compare)
+        }
         const list = {
             posts: 'title',
             pages: 'title',
@@ -44,7 +50,7 @@ if (pluginConfig?.enable) {
         Locals.get = function(name) {
             const result = get.call(this, name)
             if (name in list) sort(result, list[name])
-            if ('forEach' in  result) {
+            if ('forEach' in result) {
                 result.forEach(it => {
                     for (let tag in list)
                         sort(it[tag], list[tag])
