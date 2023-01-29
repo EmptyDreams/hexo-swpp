@@ -195,7 +195,7 @@ const eachAllFile = (root, cb) => {
 
 /** 判断指定文件是否需要排除 */
 const isExclude = pathname => {
-    for (let reg of pluginConfig.exclude) {
+    for (let reg of pluginConfig.json.exclude) {
         if (pathname.match(new RegExp(reg, 'i'))) return true
     }
     return false
@@ -397,7 +397,7 @@ const compare = (oldCache, newCache) => {
 
 /** 判断指定资源是否需要合并 */
 const isMerge = (pathname, tidied) => {
-    const optional = pluginConfig.merge
+    const optional = pluginConfig.json.merge
     if (pathname.includes(`/${config.tag_dir}/`)) {
         if (optional.tags ?? true) {
             tidied.tags = true
@@ -482,7 +482,7 @@ const mergeUpdateWithOld = (newInfo, oldUpdate, tidied) => {
         global: (oldUpdate?.global ?? 0) + (tidied.updateGlobal ? 1 : 0),
         info: [newInfo]
     }
-    const charLimit = pluginConfig.charLimit ?? 1024
+    const charLimit = pluginConfig.json.charLimit ?? 1024
     if (JSON.stringify(result).length > charLimit) {
         return {
             global: result.global,
@@ -535,7 +535,7 @@ const zipInfo = (newInfo, oldInfo) => {
 // 将更新推送到 info
 const pushUpdateToInfo = (info, tidied) => {
     // 推送页面更新
-    if (tidied.page.size > (pluginConfig.maxHtml ?? 15)) {
+    if (tidied.page.size > (pluginConfig.json.maxHtml ?? 15)) {
         // 如果 html 数量超过阈值就直接清掉所有 html
         info.change.push({flag: 'html'})
     } else {
@@ -580,7 +580,7 @@ const tidyDiff = (dif, expand) => {
         /** 标记是否更新 global 版本号 */
         updateGlobal: expand?.global
     }
-    const mode = pluginConfig.precisionMode
+    const mode = pluginConfig.json.precisionMode
     for (let it of dif) {
         const url = new URL(nodePath.join(root, it))  // 当前文件的 URL
         const cache = findCache(url)    // 查询缓存
