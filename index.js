@@ -38,6 +38,7 @@ if (pluginConfig?.enable) {
             tags: 'name',
             categories: 'name'
         }
+        Object.assign(list, pluginConfig.sort)
         const Locals = require(`${nodePath.resolve('./', 'node_modules/hexo/lib/hexo/locals')}`).prototype
         const get = Locals.get
         Locals.get = function(name) {
