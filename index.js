@@ -398,25 +398,25 @@ const compare = (oldCache, newCache) => {
 /** 判断指定资源是否需要合并 */
 const isMerge = (pathname, tidied) => {
     const optional = pluginConfig.json.merge
+    if (!optional) return false
     if (pathname.includes(`/${config.tag_dir}/`)) {
-        if (optional.tags ?? true) {
-            tidied.tags = true
-            return true
-        }
+        if (optional.tags ?? true)
+            return tidied.tags = true
     } else if (pathname.includes(`/${config.archive_dir}/`)) {
-        if (optional.archives ?? true) {
-            tidied.archives = true
-            return true
-        }
+        if (optional.archives ?? true)
+            return tidied.archives = true
     } else if (pathname.includes(`/${config.category_dir}/`)) {
-        if (optional.categories ?? true) {
-            tidied.categories = true
-            return true
-        }
+        if (optional.categories ?? true)
+            return tidied.categories = true
     } else if (pathname.startsWith('/page/') || pathname.length <= 1) {
-        if (optional.index ?? true) {
-            tidied.index = true
-            return true
+        if (optional.index ?? true)
+            return tidied.index = true
+    } else {
+        const list = optional.custom
+        if (!list) return false
+        for (let reg of list) {
+            if (pathname.startsWith(`/${reg}/`))
+                return tidied.custom[reg] = true
         }
     }
 }
@@ -534,13 +534,13 @@ const zipInfo = (newInfo, oldInfo) => {
 
 // 将更新推送到 info
 const pushUpdateToInfo = (info, tidied) => {
+    const merges = []       // 要合并的更新
     // 推送页面更新
     if (tidied.page.size > (pluginConfig.json.maxHtml ?? 15)) {
         // 如果 html 数量超过阈值就直接清掉所有 html
         info.change.push({flag: 'html'})
     } else {
         const pages = []        // 独立更新
-        const merges = []       // 要合并的更新
         tidied.page.forEach(it => pages.push(it))
         if (tidied.tags) merges.push(config.tag_dir)
         if (tidied.archives) merges.push(config.archive_dir)
@@ -549,11 +549,12 @@ const pushUpdateToInfo = (info, tidied) => {
             pages.push(clipPageName(root, false))
             merges.push('page')
         }
-        if (merges.length > 0)
-            info.change.push({flag: 'str', value: merges.map(it => `/${it}/`)})
         if (pages.length > 0)
             info.change.push({flag: 'page', value: pages})
     }
+    for (let key in tidied.custom) merges.push(key)
+    if (merges.length > 0)
+        info.change.push({flag: 'str', value: merges.map(it => `/${it}/`)})
     // 推送文件更新
     if (tidied.file.size > 0) {
         const list = []
@@ -577,6 +578,8 @@ const tidyDiff = (dif, expand) => {
         categories: false,
         /** 标记 index 是否更新 */
         index: false,
+        /** 自定义配置项 */
+        custom: {},
         /** 标记是否更新 global 版本号 */
         updateGlobal: expand?.global
     }
@@ -589,8 +592,8 @@ const tidyDiff = (dif, expand) => {
             continue
         }
         if (!cache.clean) tidied.updateGlobal = true
+        if (isMerge(url.pathname, tidied)) continue
         if (it.match(/(\/|\.html)$/)) { // 判断缓存是否是 html
-            if (isMerge(it, tidied)) continue
             if (mode.html ?? false) tidied.page.add(url.pathname)
             else tidied.page.add(clipPageName(url.href, !it.endsWith('/')))
         } else {
