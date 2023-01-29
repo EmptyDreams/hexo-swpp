@@ -31,28 +31,25 @@ if (pluginConfig?.enable) {
             const result = a.length === b.length ? a < b : a.length < b.length
             return result ? -1 : 1
         }
-        const sort = (obj, value) => obj.data.sort((a, b) => compare(a[value], b[value]))
+        const sort = (obj, value) => obj?.data?.sort((a, b) => compare(a[value], b[value]))
         const list = {
             posts: 'title',
             pages: 'title',
             tags: 'name',
             categories: 'name'
         }
-        require(`${nodePath.resolve('./', 'node_modules/hexo/lib/hexo/locals')}`).prototype.get = function(name) {
-            if (typeof name !== 'string') throw new TypeError('name must be a string!')
-            return this.cache.apply(name, () => {
-                const getter = this.getters[name]
-                if (!getter) return
-                const result = getter()
-                if (name in list) sort(result, list[name])
-                if (name === 'posts') {
-                    result.forEach(it => {
-                        it.tags.data.sort((a, b) => compare(a.name, b.name))
-                        it.categories.data.sort((a, b) => compare(a.name, b.name))
-                    })
-                }
-                return result
-            })
+        const Locals = require(`${nodePath.resolve('./', 'node_modules/hexo/lib/hexo/locals')}`).prototype
+        const get = Locals.get
+        Locals.get = function(name) {
+            const result = get.call(this, name)
+            if (name in list) sort(result, list[name])
+            if ('forEach' in  result) {
+                result.forEach(it => {
+                    for (let tag in list)
+                        sort(it[tag], list[tag])
+                })
+            }
+            return result
         }
     })()
 
@@ -159,6 +156,7 @@ if (pluginConfig?.enable) {
           </script>`
     }, "default")
 
+    // 插入 sw-dom.js
     if (!pluginConfig.dom?.custom) {
         hexo.extend.injector.register('body_begin', () => {
             // noinspection HtmlUnknownTarget
@@ -557,7 +555,7 @@ const pushUpdateToInfo = (info, tidied) => {
     }
 }
 
-// 将 diff 整理分类，并将 expand 整合到
+// 将 diff 整理分类，并将 expand 整合到结果中
 const tidyDiff = (dif, expand) => {
     const tidied = {
         /** 所有 HTML 页面 */
