@@ -86,16 +86,18 @@ if (pluginConfig?.enable) {
             if (pluginConfig.sw.cdnRacing && getCdnList) {
                 cache +=`
                     const fetchFile = (request, banCache) => {
-                        const fetchArgs = {cache: banCache ? 'no-store' : 'default'}
+                        const fetchArgs = {
+                            cache: banCache ? 'no-store' : 'default',
+                            mode: 'cors',
+                            credentials: 'same-origin'
+                        }
                         const list = getCdnList(request.url)
                         if (!list || !Promise.any) return fetch(request, fetchArgs)
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
                         return Promise.any(res.map(
-                            (it, index) => fetch(it, {
-                                cache: fetchArgs.cache,
-                                signal: (controllers[index] = new AbortController()).signal
-                            }).then(response => response.status < 303 ? {index, response} : Promise.reject())
+                            (it, index) => fetch(it, Object.assign({signal: (controllers[index] = new AbortController()).signal}, fetchArgs))
+                                .then(response => response.ok ? {index, response} : Promise.reject())
                         )).then(it => {
                             for (let i in controllers) {
                                 if (i != it.index) controllers[i].abort()
@@ -107,25 +109,33 @@ if (pluginConfig?.enable) {
             } else if (pluginConfig.sw.spareUrl && getSpareUrls) {
                 cache += `
                     const fetchFile = (request, banCache, spare = null) => {
-                        const fetchArgs = {cache: banCache ? 'no-store' : 'default'}
+                        const fetchArgs = {
+                            cache: banCache ? 'no-store' : 'default',
+                            mode: 'cors',
+                            credentials: 'same-origin'
+                        }
                         if (!spare) spare = getSpareUrls(request.url)
                         if (!spare) return fetch(request, fetchArgs)
                         const list = spare.list
                         const controllers = []
                         let error = 0
                         return new Promise((resolve, reject) => {
-                            const plusError = () => {
-                                if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
-                            }
                             const pull = () => {
                                 const flag = controllers.length
                                 if (flag === list.length) return
+                                const plusError = () => {
+                                    if (++error === list.length) reject(\`请求 \${request.url} 失败\`)
+                                    else if (flag + 1 === controllers.length) {
+                                        clearTimeout(controllers[flag].id)
+                                        pull()
+                                    }
+                                }
                                 controllers.push({
                                     ctrl: new AbortController(),
                                     id: setTimeout(pull, spare.timeout)
                                 })
                                 fetch(new Request(list[flag], request), fetchArgs).then(response => {
-                                    if (response.status < 303) {
+                                    if (response.ok) {
                                         for (let i in controllers) {
                                             if (i !== flag) controllers[i].ctrl.abort()
                                         }
@@ -138,7 +148,13 @@ if (pluginConfig?.enable) {
                         })
                     }
                 `
-            } else cache += '\nconst fetchFile = (request, banCache) => fetch(request, {cache: banCache ? "no-store" : "default"})'
+            } else cache += `
+                const fetchFile = (request, banCache) => fetch(request, {
+                    cache: banCache ? "no-store" : "default",
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                })
+            `
         }
         if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         if (!getSpareUrls) cache += `\nconst getSpareUrls = _ => {}`
