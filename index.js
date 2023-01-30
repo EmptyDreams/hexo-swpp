@@ -96,8 +96,10 @@ if (pluginConfig?.enable) {
                         const res = list.map(url => new Request(url, request))
                         const controllers = []
                         return Promise.any(res.map(
-                            (it, index) => fetch(it, Object.assign({signal: (controllers[index] = new AbortController()).signal}, fetchArgs))
-                                .then(response => response.ok ? {index, response} : Promise.reject())
+                            (it, index) => fetch(it, Object.assign(
+                                {signal: (controllers[index] = new AbortController()).signal},
+                                fetchArgs
+                            )).then(response => checkResponse(response) ? {index, response} : Promise.reject())
                         )).then(it => {
                             for (let i in controllers) {
                                 if (i != it.index) controllers[i].abort()
@@ -135,7 +137,7 @@ if (pluginConfig?.enable) {
                                     id: setTimeout(pull, spare.timeout)
                                 })
                                 fetch(new Request(list[flag], request), fetchArgs).then(response => {
-                                    if (response.ok) {
+                                    if (checkResponse(response)) {
                                         for (let i in controllers) {
                                             if (i !== flag) controllers[i].ctrl.abort()
                                         }

@@ -11,6 +11,9 @@
     // noinspection JSFileReferences
     const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')
 
+    // 检查请求是否成功
+    const checkResponse = response => response.ok || [301, 302, 307].includes(response.status)
+
     /**
      * 删除指定缓存
      * @param list 要删除的缓存列表
@@ -36,7 +39,7 @@
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
                 cache ? cache : fetchFile(newRequest, true).then(response => {
-                    if (response.status < 303) {
+                    if (checkResponse(response)) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
                     }
@@ -126,7 +129,7 @@
         }
         return fetchFile(new Request('/update.json'), false)
             .then(response => {
-                if (response.ok || response.status === 301 || response.status === 302)
+                if (checkResponse(response))
                     return response.json().then(json =>
                         parseJson(json).then(result => result.list ?
                             deleteCache(result.list).then(list => {
