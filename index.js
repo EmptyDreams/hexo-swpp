@@ -563,7 +563,7 @@ const pushUpdateToInfo = (info, tidied) => {
     }
 }
 
-// 将 diff 整理分类，并将 expand 整合到结果中
+// 将 diff 整理分类
 const tidyDiff = (dif, expand) => {
     const tidied = {
         /** 所有 HTML 页面 */
