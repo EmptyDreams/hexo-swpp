@@ -12,6 +12,7 @@
     const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')
 
     // 检查请求是否成功
+    // noinspection JSUnusedLocalSymbols
     const checkResponse = response => response.ok || [301, 302, 307].includes(response.status)
 
     /**
@@ -39,7 +40,7 @@
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
                 cache ? cache : fetchFile(newRequest, true).then(response => {
-                    if (checkResponse(response)) {
+                    if (response.status === 200) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
                     }
@@ -128,20 +129,17 @@
             })
         }
         return fetchFile(new Request('/update.json'), false)
-            .then(response => {
-                if (checkResponse(response))
-                    return response.json().then(json =>
-                        parseJson(json).then(result => result.list ?
-                            deleteCache(result.list).then(list => {
-                                return {
-                                    list,
-                                    version: result.version
-                                }
-                            }) : {version: result}
-                        )
-                    )
-                else throw `加载 update.json 时遇到异常，状态码：${response.status}`
-            })
+            .then(response => response.json())
+            .then(json =>
+                parseJson(json).then(result => result.list ?
+                    deleteCache(result.list).then(list => {
+                        return {
+                            list,
+                            version: result.version
+                        }
+                    }) : {version: result}
+                )
+            )
     }
 
     /**
