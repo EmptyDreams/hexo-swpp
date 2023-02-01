@@ -131,12 +131,9 @@
         return fetchFile(new Request('/update.json'), false)
             .then(response => response.json())
             .then(json =>
-                parseJson(json).then(result => result.list ?
-                    deleteCache(result.list).then(list => {
-                        return {
-                            list,
-                            version: result.version
-                        }
+                parseJson(json).then(result =>
+                    result.list ? deleteCache(result.list).then(list => {
+                        return {list, version: result.version}
                     }) : {version: result}
                 )
             )
