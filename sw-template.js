@@ -212,11 +212,11 @@
                 this.match = checkCache
                 break
             case 'html':
-                this.match = url => url.match(/(\/|\/index\.html)$/)
+                this.match = url => url.match(/\/(index\.html)?$/)
                 break
             case 'page':
                 this.match = url => forEachValues(
-                    value => url.endsWith(`/${value}/`) || url.endsWith(`/${value}/index.html`)
+                    value => url.match(new RegExp(`\\/${value}\\/(index\\.html)?$`))
                 )
                 break
             case 'file':
