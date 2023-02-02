@@ -10,9 +10,9 @@ if (pluginConfig?.enable) {
     const rules = require(nodePath.resolve('./', 'sw-rules'))
 
     // 排序
-    require('/lib/sort')(pluginConfig)
+    require('./lib/sort.js')(pluginConfig)
     // 生成 update.json
-    require('/lib/json')(config, pluginConfig, rules)
+    require('./lib/json.js')(hexo, config, pluginConfig, rules)
     // 生成 sw.js
-    require('/lib/sw')(config, pluginConfig, rules)
+    require('./lib/sw.js')(hexo, config, pluginConfig, rules)
 }
