@@ -12,7 +12,7 @@ if (pluginConfig?.enable) {
     // 排序
     require('./lib/sort.js')(pluginConfig)
     // 生成 update.json
-    require('./lib/json.js')(hexo, config, pluginConfig, rules)
+    require('./lib/jsonBuilder.js')(hexo, config, pluginConfig, rules)
     // 生成 sw.js
-    require('./lib/sw.js')(hexo, config, pluginConfig, rules)
+    require('./lib/swBuilder.js')(hexo, config, pluginConfig, rules)
 }
