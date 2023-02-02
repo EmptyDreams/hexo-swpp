@@ -12,8 +12,8 @@
     "index.js",
     "lib/sw-template.js",
     "lib/sw-dom.js",
-    "lib/sw.js",
-    "lib/json.js",
+    "lib/swBuilder.js",
+    "lib/jsonBuilder.js",
     "lib/sort.js"
   ],
   "keywords": [
