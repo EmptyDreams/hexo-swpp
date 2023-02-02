@@ -69,11 +69,11 @@
 
     /** 判断指定url击中了哪一种缓存，都没有击中则返回null */
     function findCache(url) {
+        if (url.host === 'localhost') return
         for (let key in cacheList) {
             const value = cacheList[key]
             if (value.match(url)) return value
         }
-        return null
     }
 
     /**
