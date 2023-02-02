@@ -1,6 +1,6 @@
 {
   "name": "hexo-swpp",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "main": "index.js",
   "dependencies": {
     "hexo-log": "^3.0.0",
