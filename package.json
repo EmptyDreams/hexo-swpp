@@ -10,8 +10,8 @@
   },
   "files": [
     "index.js",
-    "sw-template.js",
-    "sw-dom.js",
+    "lib/sw-template.js",
+    "lib/sw-dom.js",
     "lib/sw.js",
     "lib/json.js",
     "lib/sort.js"
