@@ -35,6 +35,7 @@
         if (request.method !== 'GET') return
         // [modifyRequest call]
         const url = new URL(request.url)
+        // [blockRequest call]
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>

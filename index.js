@@ -21,7 +21,8 @@ const {
     modifyRequest,
     fetchNoCache,
     getCdnList,
-    getSpareUrls
+    getSpareUrls,
+    blockRequest
 } = pluginConfig?.enable ? require(findScript()) : {}
 
 if (pluginConfig?.enable) {
@@ -169,6 +170,11 @@ if (pluginConfig?.enable) {
                 if (modify) request = modify
             `).replaceAll('// [modifyRequest else-if]', `
                 else if (modify) event.respondWith(fetch(request))
+            `)
+        }
+        if (blockRequest) {
+            swContent = swContent.replace('// [blockRequest call]', `
+                if (blockRequest(url)) return
             `)
         }
         return {
