@@ -158,12 +158,19 @@ if (pluginConfig?.enable) {
                 })
             `
         }
-        if (!modifyRequest) cache += '\nconst modifyRequest = _ => {}'
         if (!getSpareUrls) cache += `\nconst getSpareUrls = _ => {}`
-        const swContent = fs.readFileSync(relativePath, 'utf8')
-            .replaceAll("const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')", cache)
+        let swContent = fs.readFileSync(relativePath, 'utf8')
+            .replaceAll("const { cacheList, fetchFile, getSpareUrls } = require('../sw-rules')", cache)
             .replaceAll("'@$$[escape]'", (pluginConfig.sw.escape ?? 0).toString())
             .replaceAll("'@$$[cacheName]'", `'${pluginConfig.sw.cacheName ?? 'kmarBlogCache'}'`)
+        if (modifyRequest) {
+            swContent = swContent.replaceAll('// [modifyRequest call]', `
+                const modify = modifyRequest(request)
+                if (modify) request = modify
+            `).replaceAll('// [modifyRequest else-if]', `
+                else if (modify) event.respondWith(fetch(request))
+            `)
+        }
         return {
             path: 'sw.js',
             data: swContent

@@ -9,7 +9,7 @@
     self.addEventListener('install', () => self.skipWaiting())
 
     // noinspection JSFileReferences
-    const { cacheList, modifyRequest, fetchFile, getSpareUrls } = require('../sw-rules')
+    const { cacheList, fetchFile, getSpareUrls } = require('../sw-rules')
 
     // 检查请求是否成功
     // noinspection JSUnusedLocalSymbols
@@ -33,13 +33,12 @@
     self.addEventListener('fetch', event => {
         let request = event.request
         if (request.method !== 'GET') return
-        const modify = modifyRequest(request)
-        const newRequest = modify ?? request
-        const url = new URL(newRequest.url)
+        // [modifyRequest call]
+        const url = new URL(request.url)
         if (findCache(url)) {
             const key = `${url.protocol}//${url.host}${url.pathname}`
             event.respondWith(caches.match(key).then(cache =>
-                cache ? cache : fetchFile(newRequest, true).then(response => {
+                cache ? cache : fetchFile(request, true).then(response => {
                     if (response.status === 200) {
                         const clone = response.clone()
                         caches.open(CACHE_NAME).then(it => it.put(key, clone))
@@ -48,9 +47,9 @@
                 })
             ))
         } else {
-            const spare = getSpareUrls(newRequest.url)
-            if (spare) event.respondWith(fetchFile(newRequest, false, spare))
-            else if (modify) event.respondWith(fetch(newRequest))
+            const spare = getSpareUrls(request.url)
+            if (spare) event.respondWith(fetchFile(request, false, spare))
+            // [modifyRequest else-if]
         }
     })
 
