@@ -11,7 +11,10 @@
   "files": [
     "index.js",
     "sw-template.js",
-    "sw-dom.js"
+    "sw-dom.js",
+    "lib/sw.js",
+    "lib/json.js",
+    "lib/sort.js"
   ],
   "keywords": [
     "hexo",
