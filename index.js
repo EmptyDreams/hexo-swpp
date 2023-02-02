@@ -2,12 +2,12 @@
 
 "use strict"
 
+const config = hexo.config
+const pluginConfig = config.swpp || hexo.theme.config
+
 if (pluginConfig?.enable) {
     const nodePath = require('path')
     const rules = require(nodePath.resolve('./', 'sw-rules'))
-
-    const config = hexo.config
-    const pluginConfig = config.swpp || hexo.theme.config
 
     // 排序
     require('/lib/sort')(pluginConfig)
