@@ -27,9 +27,6 @@ function loadRules() {
     const themes = nodePath.resolve('./themes/', themeName, 'sw-rules.js')
     // node_modules 文件下的文件
     const modules = nodePath.resolve('./node_modules/', `hexo-theme-${themeName}/sw-rules.js`)
-    console.log(root)
-    console.log(themes)
-    console.log(modules)
     const exists = {
         root: fs.existsSync(root),
         themes: fs.existsSync(themes),
@@ -37,7 +34,7 @@ function loadRules() {
     }
     if (!(exists.root || exists.themes || exists.modules)) {
         const tip = "未找到 sw-rules.js 文件"
-        logger.error(tip)
+        logger.error(`[sw-rules]: ${tip}`)
         throw tip
     }
     let result = {}
@@ -46,5 +43,7 @@ function loadRules() {
     else if (exists.modules) {
         result = require(modules)
     }
+    if ('afterTheme' in result)
+        logger.error("[sw-rules]: 主题目录下的 sw-rules.js 中不应当包含 afterTheme 函数！")
     return exists.root ? { ...result, ...require(root) } : result
 }
