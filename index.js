@@ -22,11 +22,14 @@ function loadRules() {
     const fs = require('fs')
     const themeName = hexo.config.theme
     // 根目录下的文件
-    const root = nodePath.resolve('./', 'sw-rules')
+    const root = nodePath.resolve('./', 'sw-rules.js')
     // themes 文件夹下的文件
-    const themes = nodePath.resolve('./themes/', themeName)
+    const themes = nodePath.resolve('./themes/', themeName, 'sw-rules.js')
     // node_modules 文件下的文件
-    const modules = nodePath.resolve('./node_modules/', `hexo-theme-${themeName}`)
+    const modules = nodePath.resolve('./node_modules/', `hexo-theme-${themeName}/sw-rules.js`)
+    console.log(root)
+    console.log(themes)
+    console.log(modules)
     const exists = {
         root: fs.existsSync(root),
         themes: fs.existsSync(themes),
@@ -40,7 +43,8 @@ function loadRules() {
     let result = {}
     if (exists.themes)
         result = require(themes)
-    else if (exists.modules)
+    else if (exists.modules) {
         result = require(modules)
+    }
     return exists.root ? { ...result, ...require(root) } : result
 }
