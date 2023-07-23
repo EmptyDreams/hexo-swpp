@@ -3,21 +3,26 @@
 "use strict"
 
 const config = hexo.config
-const pluginConfig = config.swpp || hexo.theme.config
+const enable = (config.swpp ?? hexo.theme.config.swpp)?.enable
+const logger = require('hexo-log')()
 
-if (pluginConfig?.enable) {
+if (enable) {
     const rules = loadRules()
+    const defConfig = require('./lib/defConfig')
+    if (!rules.config) {
+        logger.error("未在 sw-rules.js 中查找到插件配置！")
+        throw '插件配置缺失'
+    }
     // 排序
-    require('./lib/sort.js')(pluginConfig)
+    require('./lib/sort.js')(defConfig, rules.config)
     // 生成 update.json
-    require('./lib/jsonBuilder.js')(hexo, config, pluginConfig, rules)
+    require('./lib/jsonBuilder.js')(hexo, config, defConfig, rules)
     // 生成 sw.js
-    require('./lib/swBuilder.js')(hexo, config, pluginConfig, rules)
+    require('./lib/swBuilder.js')(hexo, config, defConfig, rules)
 }
 
 // 加载 sw-rules.js 文件
 function loadRules() {
-    const logger = require('hexo-log')()
     const nodePath = require('path')
     const fs = require('fs')
     const themeName = hexo.config.theme
