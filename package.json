@@ -1,6 +1,6 @@
 {
   "name": "hexo-swpp",
-  "version": "2.7.0-beta.0",
+  "version": "2.7.0-beta.1",
   "main": "index.js",
   "dependencies": {
     "hexo-log": "^3.0.0",
@@ -14,7 +14,8 @@
     "lib/sw-dom.js",
     "lib/swBuilder.js",
     "lib/jsonBuilder.js",
-    "lib/sort.js"
+    "lib/sort.js",
+    "lib/defConfig.js"
   ],
   "keywords": [
     "hexo",
