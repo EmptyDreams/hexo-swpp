@@ -5,7 +5,6 @@
 const config = hexo.config
 const enable = (config.swpp ?? hexo.theme.config.swpp)?.enable
 
-
 if (enable) {
     const configLoader = require('./lib/configLoader')
     const rules = configLoader.load(hexo)
