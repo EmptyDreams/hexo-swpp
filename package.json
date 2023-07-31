@@ -4,9 +4,9 @@
   "main": "index.js",
   "dependencies": {
     "hexo-log": "^3.0.0",
-    "node-fetch": "^2.0.0",
+    "node-fetch": "^2.6.9",
     "cheerio": "^1.0.0-rc.12",
-    "postcss": "^8.4.20"
+    "postcss": "^8.4.27"
   },
   "files": [
     "index.cjs",
