@@ -9,14 +9,14 @@
     "postcss": "^8.4.20"
   },
   "files": [
-    "index.js",
+    "index.cjs",
     "lib/sw-template.js",
     "lib/sw-dom.js",
-    "lib/swBuilder.js",
-    "lib/jsonBuilder.js",
-    "lib/sort.js",
-    "lib/configLoader.js",
-    "lib/utils.js"
+    "lib/swBuilder.cjs",
+    "lib/jsonBuilder.cjs",
+    "lib/sort.cjs",
+    "lib/configLoader.cjs",
+    "lib/utils.cjs"
   ],
   "keywords": [
     "hexo",
