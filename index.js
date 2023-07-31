@@ -72,7 +72,7 @@ function getSource(any, separator = '\n', whiteList = null, mapper = null) {
                 .map(key => {
                     const value = any[key]
                     let nextMapper = null
-                    if (whiteList && key === 'cacheList') {
+                    if (whiteList && ['cacheList', 'modifyRequest'].includes(key)) {
                         nextMapper = str => str.replace(/\(\s*(.*?)\s*,\s*\$eject\s*\)/g, "$1")
                             .replaceAll(/\$eject\.(\w+)/g, (_, match) => `eject${match[0].toUpperCase()}${match.substring(1)}`)
                     }
