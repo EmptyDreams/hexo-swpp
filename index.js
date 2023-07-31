@@ -13,9 +13,9 @@ if (enable) {
     // 排序
     require('./lib/sort.js')(rules.config)
     // 生成 update.json
-    require('./lib/jsonBuilder.js')(hexo, config, rules, ejectValues.obj)
+    require('./lib/jsonBuilder.js')(hexo, config, rules, ejectValues?.obj)
     // 生成 sw.js
-    require('./lib/swBuilder.js')(hexo, config, rules, ejectValues.str)
+    require('./lib/swBuilder.js')(hexo, config, rules, ejectValues?.str)
 }
 
 /**
