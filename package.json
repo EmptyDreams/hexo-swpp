@@ -15,7 +15,8 @@
     "lib/swBuilder.js",
     "lib/jsonBuilder.js",
     "lib/sort.js",
-    "lib/configLoader.js"
+    "lib/configLoader.js",
+    "lib/utils.js"
   ],
   "keywords": [
     "hexo",
