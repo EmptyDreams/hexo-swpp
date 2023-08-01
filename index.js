@@ -4,18 +4,23 @@
 
 const config = hexo.config
 const enable = (config.swpp ?? hexo.theme.config.swpp)?.enable
-const { getSource } = require('./lib/utils')
 
 if (enable) {
-    const configLoader = require('./lib/configLoader')
-    const rules = configLoader.load(hexo)
-    const ejectValues = calcEjectValues(hexo, rules)
-    // 排序
-    require('./lib/sort.js')(rules.config)
-    // 生成 update.json
-    require('./lib/jsonBuilder.js')(hexo, config, rules, ejectValues?.obj)
-    // 生成 sw.js
-    require('./lib/swBuilder.js')(hexo, config, rules, ejectValues?.str)
+    try {
+        const configLoader = require('./lib/configLoader')
+        const rules = configLoader.load(hexo)
+        const ejectValues = calcEjectValues(hexo, rules)
+        // 排序
+        require('./lib/sort.js')(rules.config)
+        // 生成 update.json
+        require('./lib/jsonBuilder.js')(hexo, config, rules, ejectValues?.obj)
+        // 生成 sw.js
+        require('./lib/swBuilder.js')(hexo, config, rules, ejectValues?.str)
+    } catch (e) {
+        const logger = require('hexo-log')()
+        logger.error('[SWPP Index] 加载过程中遇到了错误：')
+        process.exit(114514)
+    }
 }
 
 /**
@@ -26,6 +31,7 @@ if (enable) {
  */
 function calcEjectValues(hexo, rules) {
     if (!('ejectValues' in rules)) return null
+    const { getSource } = require('./lib/utils')
     const obj = rules.ejectValues(hexo, rules)
     const nodeObj = {}
     let result = ''
