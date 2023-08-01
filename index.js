@@ -11,11 +11,11 @@ if (enable) {
         const rules = configLoader.load(hexo)
         const ejectValues = calcEjectValues(hexo, rules)
         // 排序
-        require('./lib/sort.js')(rules.config)
+        require('./lib/sort')(rules.config)
         // 生成 update.json
-        require('./lib/jsonBuilder.js')(hexo, config, rules, ejectValues?.obj)
+        require('./lib/jsonBuilder')(hexo, config, rules, ejectValues?.obj)
         // 生成 sw.js
-        require('./lib/swBuilder.js')(hexo, config, rules, ejectValues?.str)
+        require('./lib/swBuilder')(hexo, config, rules, ejectValues?.str)
     } catch (e) {
         const logger = require('hexo-log')()
         logger.error('[SWPP Index] 加载过程中遇到了错误：')
