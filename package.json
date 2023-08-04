@@ -1,7 +1,14 @@
 {
   "name": "hexo-swpp",
-  "version": "2.8.10",
-  "main": "index.js",
+  "version": "3.0.0-alpha",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "prepublishOnly": "tsc"
+  },
+  "files": [
+    "dist", "types"
+  ],
   "keywords": [
     "hexo",
     "sw",
@@ -18,9 +25,11 @@
   "homepage": "https://kmar.top/posts/73014407/",
   "devDependencies": {
     "@types/node": "^20.4.7",
+    "hexo": "7.0.0-rc2",
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "swpp-backends": "0.0.1-alpha.1"
+    "hexo-log": "^4.1.0",
+    "swpp-backends": "0.0.5-alpha"
   }
 }
