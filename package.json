@@ -2,22 +2,6 @@
   "name": "hexo-swpp",
   "version": "2.8.10",
   "main": "index.js",
-  "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
-    "hexo-log": "^3.0.0",
-    "node-fetch": "^2.6.9",
-    "postcss": "^8.4.27"
-  },
-  "files": [
-    "index.js",
-    "lib/sw-template.js",
-    "lib/sw-dom.js",
-    "lib/swBuilder.js",
-    "lib/jsonBuilder.js",
-    "lib/sort.js",
-    "lib/configLoader.js",
-    "lib/utils.js"
-  ],
   "keywords": [
     "hexo",
     "sw",
@@ -31,5 +15,12 @@
     "type": "git",
     "url": "https://github.com/EmptyDreams/hexo-swpp.git"
   },
-  "homepage": "https://kmar.top/posts/73014407/"
+  "homepage": "https://kmar.top/posts/73014407/",
+  "devDependencies": {
+    "@types/node": "^20.4.7",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "swpp-backends": "0.0.1-alpha.1"
+  }
 }
