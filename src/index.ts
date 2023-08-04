@@ -79,10 +79,10 @@ async function buildVersionJson(hexo: Hexo) {
     let protocol, domain
     if (url.startsWith('https:')) {
         protocol = 'https://'
-        domain = url.substring(protocol.length + 1)
+        domain = url.substring(protocol.length)
     } else {
         protocol = 'http://'
-        domain = url.substring(protocol.length + 1)
+        domain = url.substring(protocol.length)
     }
     // @ts-ignore
     const json = await swpp.builder.buildVersionJson(protocol, domain, nodePath.resolve('./', hexo.config.public_dir))
