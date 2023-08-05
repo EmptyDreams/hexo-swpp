@@ -50,7 +50,7 @@ function start(hexo: Hexo) {
                     logger.error(`[SWPP Console] 规则文件的 update 项目必须包含 flag 值！`)
                     throw 'update.flag 缺失'
                 }
-                swpp.event.submitCacheInfo({ updateFlag: flag })
+                swpp.event.submitCacheInfo('flag', flag)
                 if (flag !== versionJson.external.flag) {
                     if (change)
                         swpp.event.submitChange(...change)
