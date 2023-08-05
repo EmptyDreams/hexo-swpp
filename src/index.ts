@@ -51,7 +51,7 @@ function start(hexo: Hexo) {
                     throw 'update.flag 缺失'
                 }
                 swpp.event.submitCacheInfo('flag', flag)
-                if (flag !== versionJson.external.flag) {
+                if (flag !== versionJson?.external?.flag) {
                     if (change)
                         swpp.event.submitChange(...change)
                     if (refresh)
