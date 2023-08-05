@@ -1,6 +1,6 @@
 {
   "name": "hexo-swpp",
-  "version": "3.0.0-alpha.5",
+  "version": "3.0.0",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "scripts": {
@@ -32,6 +32,6 @@
     "hexo-log": "^4.1.0"
   },
   "peerDependencies": {
-    "swpp-backends": "^0.0.12-alpha"
+    "swpp-backends": "^1.0.0"
   }
 }
