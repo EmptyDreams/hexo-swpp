@@ -40,8 +40,10 @@ function start(hexo: Hexo) {
             if (!fs.existsSync(hexo.config.public_dir))
                 return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
             const url = hexo.config.url
-            await swpp.loader.loadUpdateJson(url + '/update.json')
-            const versionJson = await swpp.loader.loadVersionJson(url + '/cacheList.json')
+            const versionJson = await Promise.all([
+                swpp.loader.loadUpdateJson(url + '/update.json'),
+                swpp.loader.loadVersionJson(url + '/cacheList.json')
+            ]).then(array => array[1])
             let forceRefreshCache = false
             if ('update' in rules) {
                 const update: HexoSwppUpdate = rules.update
@@ -59,6 +61,20 @@ function start(hexo: Hexo) {
                     if (force) forceRefreshCache = true
                 }
             }
+            if ('extraListenedUrls' in rules) {
+                const urls = rules.extraListenedUrls
+                if (!('forEach' in urls)) {
+                    logger.error(`[SWPP Console] extraListenedUrls 应当附带 forEach 函数！`)
+                    throw 'extraListenedUrls 类型错误'
+                }
+                urls.forEach((it: any) => {
+                    if (typeof it !== 'string') {
+                        logger.error(`[SWPP Console] extraListenedUrls 中的 ${it} 类型不为 string`)
+                        throw it
+                    }
+                    swpp.event.submitExternalUrl(it)
+                })
+            }
             await buildVersionJson(hexo)
             const dif = swpp.builder.analyze(swpp.cache.readNewVersionJson())
             if (forceRefreshCache)
@@ -72,6 +88,7 @@ async function buildUpdateJson(hexo: Hexo, dif: AnalyzeResult) {
     const url = hexo.config.url
     const json = swpp.builder.buildNewInfo(url, dif)
     fs.writeFileSync(`${hexo.config.public_dir}/update.json`, JSON.stringify(json), 'utf-8')
+    logger.info('成功生成：update.json')
 }
 
 async function buildVersionJson(hexo: Hexo) {
@@ -79,14 +96,14 @@ async function buildVersionJson(hexo: Hexo) {
     let protocol, domain
     if (url.startsWith('https:')) {
         protocol = 'https://'
-        domain = url.substring(protocol.length)
     } else {
         protocol = 'http://'
-        domain = url.substring(protocol.length)
     }
+    domain = url.substring(protocol.length, url.endsWith('/') ? url.length - 1 : url.length)
     // @ts-ignore
     const json = await swpp.builder.buildVersionJson(protocol, domain, nodePath.resolve('./', hexo.config.public_dir))
     fs.writeFileSync(`${hexo.config.public_dir}/cacheList.json`, JSON.stringify(json), 'utf-8')
+    logger.info('成功生成：cacheList.json')
 }
 
 function buildServiceWorker(hexo: Hexo) {
