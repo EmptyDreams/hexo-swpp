@@ -172,7 +172,7 @@ function sort(hexo: Hexo) {
         tags: 'name'
     }
     // @ts-ignore
-    Object.assign(list, swpp.cache.readRules().config['sort'])
+    Object.assign(list, swpp.cache.readRules().config['sort'] ?? {})
     const getter = Locals.get
     Locals.get = function (name: string) {
         const result = getter.call(this, name)
