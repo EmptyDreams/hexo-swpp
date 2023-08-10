@@ -15,7 +15,7 @@ export interface HexoSwppUpdate {
 // noinspection JSUnusedGlobalSymbols
 function start(hexo: Hexo) {
     const {config} = hexo
-    if (!(config['swpp']?.enable || hexo.theme.config['swpp']?.enable))
+    if (!(config['swpp']?.enable || config.theme_config['swpp']?.enable))
         return
     const themeName = config.theme
     swpp.event.addRulesMapEvent(rules => {
