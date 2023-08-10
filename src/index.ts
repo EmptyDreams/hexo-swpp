@@ -130,10 +130,14 @@ function buildServiceWorker(hexo: Hexo) {
         // noinspection HtmlUnknownTarget
         hexo.extend.injector.register('body_begin', () => `<script src="/sw-dom.js"></script>`)
         hexo.extend.generator.register('build_dom_js', () => {
-            const template = fs.readFileSync(
+            const onsuccess = pluginConfig.dom!.onsuccess
+            let template = fs.readFileSync(
                 nodePath.resolve('./', 'node_modules/swpp-backends/dist/resources/sw-dom.js'),
                 'utf-8'
-            ).replaceAll(`// \${onSuccess}`, `(${pluginConfig.dom!.onsuccess.toString()})()`)
+            )
+            // @ts-ignore
+            if (onsuccess)
+                template = template.replaceAll(`// \${onSuccess}`, `(${pluginConfig.dom!.onsuccess.toString()})()`)
             return {
                 path: 'sw-dom.js',
                 data: template
