@@ -10,7 +10,30 @@ function start(hexo: Hexo) {
     const {config} = hexo
     if (!(config['swpp']?.enable || config.theme_config['swpp']?.enable))
         return
-    const themeName = config.theme
+    sort(hexo)
+    hexo.on('generateBefore', () => {
+        loadRules(hexo)
+        buildServiceWorker(hexo)
+    })
+    hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
+        if (!fs.existsSync(hexo.config.public_dir))
+            return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
+        const rules = loadRules(hexo)
+        if (!rules.config.json)
+            return logger.error(`[SWPP] JSON 生成功能未开启，跳过指令执行`)
+        const url = hexo.config.url
+        await Promise.all([
+            swpp.loader.loadUpdateJson(url + '/update.json'),
+            swpp.loader.loadVersionJson(url + '/cacheList.json')
+        ])
+        await buildVersionJson(hexo)
+        const dif = swpp.builder.analyzeVersion()
+        await buildUpdateJson(hexo, dif)
+    })
+}
+
+function loadRules(hexo: Hexo) {
+    const themeName = hexo.config.theme
     swpp.event.addRulesMapEvent(rules => {
         if ('cacheList' in rules && !('cacheRules' in rules)) {
             rules.cacheRules = rules['cacheList']
@@ -21,27 +44,12 @@ function start(hexo: Hexo) {
             delete rules['getCdnList']
         }
     })
-    const rules = swpp.loader.loadRules(
+    const result = swpp.loader.loadRules(
         './', 'sw-rules',
         [`./themes/${themeName}/`, `./node_modules/hexo-${themeName}/`]
     )
     swpp.builder.calcEjectValues(hexo)
-    sort(hexo)
-    buildServiceWorker(hexo)
-    if (rules.config.json) {
-        hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
-            if (!fs.existsSync(hexo.config.public_dir))
-                return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
-            const url = hexo.config.url
-            await Promise.all([
-                swpp.loader.loadUpdateJson(url + '/update.json'),
-                swpp.loader.loadVersionJson(url + '/cacheList.json')
-            ])
-            await buildVersionJson(hexo)
-            const dif = swpp.builder.analyzeVersion()
-            await buildUpdateJson(hexo, dif)
-        })
-    }
+    return result
 }
 
 async function buildUpdateJson(hexo: Hexo, dif: AnalyzeResult) {
