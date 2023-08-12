@@ -15,11 +15,12 @@ function start(hexo: Hexo) {
         loadRules(hexo)
         buildServiceWorker(hexo)
     })
-    hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
-        await runSwpp(hexo)
-    })
     if (pluginConfig['auto_exec']) {
         hexo.on('deployBefore', async () => {
+            await runSwpp(hexo)
+        })
+    } else {
+        hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
             await runSwpp(hexo)
         })
     }
