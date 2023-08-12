@@ -1,16 +1,9 @@
 import * as fs from 'fs'
 import Hexo from 'hexo'
-import swpp, {AnalyzeResult, ChangeExpression} from 'swpp-backends'
+import swpp, {AnalyzeResult} from 'swpp-backends'
 import nodePath from 'path'
 
 const logger = require('hexo-log').default()
-
-export interface HexoSwppUpdate {
-    flag: any,
-    force?: boolean,
-    change?: ChangeExpression[],
-    refresh?: string[]
-}
 
 // noinspection JSUnusedGlobalSymbols
 function start(hexo: Hexo) {
@@ -40,45 +33,12 @@ function start(hexo: Hexo) {
             if (!fs.existsSync(hexo.config.public_dir))
                 return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
             const url = hexo.config.url
-            const versionJson = await Promise.all([
+            await Promise.all([
                 swpp.loader.loadUpdateJson(url + '/update.json'),
                 swpp.loader.loadVersionJson(url + '/cacheList.json')
-            ]).then(array => array[1])
-            let forceRefreshCache = false
-            if ('update' in rules) {
-                const update: HexoSwppUpdate = rules.update
-                const {flag, change, refresh, force} = update
-                if (!flag) {
-                    logger.error(`[SWPP Console] 规则文件的 update 项目必须包含 flag 值！`)
-                    throw 'update.flag 缺失'
-                }
-                swpp.event.submitCacheInfo('flag', flag)
-                if (flag !== versionJson?.external?.flag) {
-                    if (change)
-                        swpp.event.submitChange(...change)
-                    if (refresh)
-                        refresh.forEach(swpp.event.refreshUrl)
-                    if (force) forceRefreshCache = true
-                }
-            }
-            if ('extraListenedUrls' in rules) {
-                const urls = rules.extraListenedUrls
-                if (!('forEach' in urls)) {
-                    logger.error(`[SWPP Console] extraListenedUrls 应当附带 forEach 函数！`)
-                    throw 'extraListenedUrls 类型错误'
-                }
-                urls.forEach((it: any) => {
-                    if (typeof it !== 'string') {
-                        logger.error(`[SWPP Console] extraListenedUrls 中的 ${it} 类型不为 string`)
-                        throw it
-                    }
-                    swpp.event.submitExternalUrl(it)
-                })
-            }
+            ])
             await buildVersionJson(hexo)
-            const dif = swpp.builder.analyze(swpp.cache.readNewVersionJson())
-            if (forceRefreshCache)
-                dif.force = true
+            const dif = swpp.builder.analyzeVersion()
             await buildUpdateJson(hexo, dif)
         })
     }
@@ -86,7 +46,7 @@ function start(hexo: Hexo) {
 
 async function buildUpdateJson(hexo: Hexo, dif: AnalyzeResult) {
     const url = hexo.config.url
-    const json = swpp.builder.buildNewInfo(url, dif)
+    const json = swpp.builder.buildUpdateJson(url, dif)
     fs.writeFileSync(`${hexo.config.public_dir}/update.json`, JSON.stringify(json), 'utf-8')
     logger.info('成功生成：update.json')
 }
@@ -130,17 +90,9 @@ function buildServiceWorker(hexo: Hexo) {
         // noinspection HtmlUnknownTarget
         hexo.extend.injector.register('body_begin', () => `<script src="/sw-dom.js"></script>`)
         hexo.extend.generator.register('build_dom_js', () => {
-            const onsuccess = pluginConfig.dom!.onsuccess
-            let template = fs.readFileSync(
-                nodePath.resolve('./', 'node_modules/swpp-backends/dist/resources/sw-dom.js'),
-                'utf-8'
-            )
-            // @ts-ignore
-            if (onsuccess)
-                template = template.replaceAll(`// \${onSuccess}`, `(${pluginConfig.dom!.onsuccess.toString()})()`)
             return {
                 path: 'sw-dom.js',
-                data: template
+                data: swpp.builder.buildDomJs()
             }
         })
     }
