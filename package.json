@@ -7,7 +7,8 @@
     "prepublishOnly": "tsc"
   },
   "files": [
-    "dist", "types"
+    "dist",
+    "types"
   ],
   "keywords": [
     "hexo",
@@ -25,11 +26,13 @@
   "homepage": "https://kmar.top/posts/73014407/",
   "devDependencies": {
     "@types/node": "^20.4.7",
+    "@types/node-fetch": "^2.6.4",
     "hexo": "7.0.0-rc2",
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "hexo-log": "^4.1.0"
+    "hexo-log": "^4.1.0",
+    "node-fetch": "^2.6.12"
   },
   "peerDependencies": {
     "swpp-backends": "^2.0.0"

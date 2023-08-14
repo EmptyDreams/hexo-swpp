@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import Hexo from 'hexo'
+import fetch from 'node-fetch'
 import swpp, {AnalyzeResult} from 'swpp-backends'
 import nodePath from 'path'
 
@@ -10,6 +11,7 @@ function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig.enable) return
+    checkVersion()
     let init = false
     hexo.on('generateBefore', () => {
         if (init) return
@@ -44,6 +46,26 @@ async function runSwpp(hexo: Hexo) {
     await buildVersionJson(hexo)
     const dif = swpp.builder.analyzeVersion()
     await buildUpdateJson(hexo, dif)
+}
+
+function checkVersion() {
+    fetch(`https://registry.npmjs.org/swpp-backends/${swpp.version}`)
+        .then(response => {
+            if (![200, 301, 302, 307, 308].includes(response.status)) return Promise.reject(response.status)
+            return response.json()
+        }).then(json => {
+            if ('deprecated' in json) {
+                logger.error(`[SWPP VersionChecker] 您使用的 swpp-backends@${swpp.version} 已被弃用，请更新版本！`)
+                logger.error(`\t补充信息：${json['deprecated']}`)
+            } else {
+                logger.info('[SWPP VersionChecker] 版本检查通过，注意定期检查版本更新。')
+            }
+        }).catch(err => {
+            const isNumber = typeof err === 'number'
+            logger.warn(`[SWPP VersionChecker] 版本检查失败${isNumber ? ('（' + err + '）'): ''}`)
+            if (!isNumber)
+                logger.warn(err)
+        })
 }
 
 function loadRules(hexo: Hexo) {
