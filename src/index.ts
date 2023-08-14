@@ -10,9 +10,9 @@ function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig.enable) return
-    sort(hexo)
     hexo.on('generateBefore', () => {
         loadRules(hexo)
+        sort(hexo)
         buildServiceWorker(hexo)
     })
     if (pluginConfig['auto_exec']) {
