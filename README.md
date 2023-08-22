@@ -72,6 +72,7 @@ module.exports.config = {
   5. 插入的 DOM JS 加载方式改为 async \[3.2.2]
   6. 修复运行 `hexo s` 时报错的问题 \[3.2.3]
   7. 支持版本检查 \[3.2.3]
+  8. 版本检查移动到 `generateBefore` 事件中 \[3.2.4]
 + 3.1+
 
   1. 支持 `swpp-backends@1.1` \[3.1.0]
