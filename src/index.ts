@@ -6,14 +6,13 @@ import nodePath from 'path'
 
 const logger = require('hexo-log').default()
 
-if (process.argv.find(it => 'server'.startsWith(it)))
-    checkVersion()
-
 // noinspection JSUnusedGlobalSymbols
 function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig = config['swpp'] ?? config.theme_config['swpp']
-    if (!pluginConfig.enable) return
+    if (!pluginConfig?.enable) return
+    if (process.argv.find(it => 'server'.startsWith(it)))
+        checkVersion(pluginConfig)
     let init = false
     hexo.on('generateBefore', () => {
         if (init) return
@@ -50,8 +49,9 @@ async function runSwpp(hexo: Hexo, pluginConfig: any) {
     await buildUpdateJson(hexo, dif)
 }
 
-function checkVersion() {
-    fetch(`https://registry.npmjs.org/swpp-backends/${swpp.version}`)
+function checkVersion(pluginConfig: any) {
+    const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
+    fetch(`${root}/swpp-backends/${swpp.version}`)
         .then(response => {
             if (![200, 301, 302, 307, 308].includes(response.status)) return Promise.reject(response.status)
             return response.json()
