@@ -22,16 +22,16 @@ function start(hexo: Hexo) {
     })
     if (pluginConfig['auto_exec']) {
         hexo.on('deployBefore', async () => {
-            await runSwpp(hexo)
+            await runSwpp(hexo, pluginConfig)
         })
     } else {
         hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
-            await runSwpp(hexo)
+            await runSwpp(hexo, pluginConfig)
         })
     }
 }
 
-async function runSwpp(hexo: Hexo) {
+async function runSwpp(hexo: Hexo, pluginConfig: any) {
     const config = hexo.config
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
@@ -40,8 +40,8 @@ async function runSwpp(hexo: Hexo) {
         return logger.error(`[SWPP] JSON 生成功能未开启，跳过指令执行`)
     const url = config.url
     await Promise.all([
-        swpp.loader.loadUpdateJson(url + '/update.json'),
-        swpp.loader.loadVersionJson(url + '/cacheList.json')
+        swpp.loader.loadUpdateJson(url + '/update.json', pluginConfig['warn_level'] ?? 1),
+        swpp.loader.loadVersionJson(url + '/cacheList.json', pluginConfig['warn_level'] ?? 1)
     ])
     await buildVersionJson(hexo)
     const dif = swpp.builder.analyzeVersion()
