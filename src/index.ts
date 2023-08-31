@@ -56,6 +56,7 @@ function checkVersion(pluginConfig: any) {
             if (![200, 301, 302, 307, 308].includes(response.status)) return Promise.reject(response.status)
             return response.json()
         }).then(json => {
+            if ('error' in json) return Promise.reject(json.error)
             if ('deprecated' in json) {
                 logger.error(`[SWPP VersionChecker] 您使用的 swpp-backends@${swpp.version} 已被弃用，请更新版本！`)
                 logger.error(`\t补充信息：${json['deprecated']}`)
@@ -63,9 +64,9 @@ function checkVersion(pluginConfig: any) {
                 logger.info('[SWPP VersionChecker] 版本检查通过，注意定期检查版本更新。')
             }
         }).catch(err => {
-            const isNumber = typeof err === 'number'
-            logger.warn(`[SWPP VersionChecker] 版本检查失败${isNumber ? ('（' + err + '）'): ''}`)
-            if (!isNumber)
+            const isSimple = ['number', 'string'].includes(typeof err)
+            logger.warn(`[SWPP VersionChecker] 版本检查失败${isSimple ? ('（' + err + '）'): ''}`)
+            if (!isSimple)
                 logger.warn(err)
         })
 }
