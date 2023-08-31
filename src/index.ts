@@ -6,6 +6,9 @@ import nodePath from 'path'
 
 const logger = require('hexo-log').default()
 
+if (process.argv.find(it => 'server'.startsWith(it)))
+    checkVersion()
+
 // noinspection JSUnusedGlobalSymbols
 function start(hexo: Hexo) {
     const config = hexo.config
@@ -14,7 +17,6 @@ function start(hexo: Hexo) {
     let init = false
     hexo.on('generateBefore', () => {
         if (init) return
-        checkVersion()
         init = true
         loadRules(hexo)
         sort(hexo)
