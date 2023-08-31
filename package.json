@@ -35,6 +35,6 @@
     "node-fetch": "^2.6.12"
   },
   "peerDependencies": {
-    "swpp-backends": "^2.0.0"
+    "swpp-backends": "^2.1.2"
   }
 }
