@@ -135,7 +135,7 @@ function buildServiceWorker(hexo: Hexo) {
     // 生成 sw-dom.js
     if (pluginConfig.dom) {
         // noinspection HtmlUnknownTarget
-        hexo.extend.injector.register('body_begin', () => `<script async src="/sw-dom.js"></script>`)
+        hexo.extend.injector.register('body_begin', () => `<script defer src="/sw-dom.js"></script>`)
         hexo.extend.generator.register('build_dom_js', () => {
             return {
                 path: 'sw-dom.js',
