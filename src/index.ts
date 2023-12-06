@@ -159,14 +159,38 @@ function sort(hexo: Hexo) {
         const result = a.length === b.length ? a < b : a.length < b.length
         return result ? -1 : 1
     }
-    const sort = (obj: any, value: string | boolean) => {
+    const sort = (obj: any, value: string | boolean, keyName: string) => {
         if (!obj) return
         const target = obj.data ?? obj
-        if (!target.sort) return
-        if (typeof value === 'boolean') {
-            if (value) target.sort(compare)
+        if ('sort' in target) {
+            if (typeof value === 'boolean') {
+                if (value) target.sort(compare)
+            } else {
+                target.sort((a: any, b: any) => compare(a[value], b[value]))
+            }
+        } else if (typeof value !== 'boolean') {
+            const keyList = Object.getOwnPropertyNames(obj)
+            if (keyList.length === 0) return
+            if (!(value in obj[keyList[0]])) {
+                console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
+                return
+            }
+            const result = []
+            for (let key of keyList) {
+                result.push(target[key])
+                console.assert(
+                    !target[key]._id || target[key]._id == key,
+                    `排序是出现问题，_id 值异常：${target[key]._id} with ${key}`
+                )
+                target[key]._id = key
+                delete target[key]
+            }
+            result.sort((a: any, b: any) => compare(a[value], b[value]))
+            for (let item of result) {
+                target[item._id] = item[value]
+            }
         } else {
-            target.sort((a: any, b: any) => compare(a[value], b[value]))
+            console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
         }
     }
     const list: { [propName: string]: string | boolean } = {
@@ -179,11 +203,11 @@ function sort(hexo: Hexo) {
     const getter = Locals.get
     Locals.get = function (name: string) {
         const result = getter.call(this, name)
-        if (name in list) sort(result, list[name])
+        if (name in list) sort(result, list[name], name)
         if ('forEach' in result) {
             result.forEach((it: any) => {
                 for (let tag in list)
-                    sort(it[tag], list[tag])
+                    sort(it[tag], list[tag], tag)
             })
         }
         return result
