@@ -27,7 +27,7 @@
   "devDependencies": {
     "@types/node": "^20.4.7",
     "@types/node-fetch": "^2.6.4",
-    "hexo": "7.0.0-rc2",
+    "hexo": "7.0.0",
     "typescript": "^5.1.6"
   },
   "dependencies": {
