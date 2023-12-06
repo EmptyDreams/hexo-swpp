@@ -169,9 +169,9 @@ function sort(hexo: Hexo) {
                 target.sort((a: any, b: any) => compare(a[value], b[value]))
             }
         } else if (typeof value !== 'boolean') {
-            const keyList = Object.getOwnPropertyNames(obj)
+            const keyList = Object.getOwnPropertyNames(target)
             if (keyList.length === 0) return
-            if (!(value in obj[keyList[0]])) {
+            if (!(value in target[keyList[0]])) {
                 console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
                 return
             }
