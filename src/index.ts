@@ -160,37 +160,42 @@ function sort(hexo: Hexo) {
         return result ? -1 : 1
     }
     const sort = (obj: any, value: string | boolean, keyName: string) => {
-        if (!obj) return
+        if (!obj || !value) return
         const target = obj.data ?? obj
         if ('sort' in target) {
             if (typeof value === 'boolean') {
-                if (value) target.sort(compare)
+                target.sort(compare)
             } else {
                 target.sort((a: any, b: any) => compare(a[value], b[value]))
             }
-        } else if (typeof value !== 'boolean') {
+        } else {
             const keyList = Object.getOwnPropertyNames(target)
             if (keyList.length === 0) return
-            if (!(value in target[keyList[0]])) {
-                console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
-                return
+            let comparator
+            if (typeof value === 'boolean') {
+                comparator = (a: any, b: any) => compare(a.value, b.value)
+            } else if (typeof target[keyList[0]] == 'string') {
+                if (value != 'name') {
+                    return console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
+                }
+                comparator = (a: any, b: any) => compare(a.value, b.value)
+            } else if (value in target[keyList[0]]) {
+                comparator = (a: any, b: any) => compare(a.value[value], b.value[value])
+            } else {
+                return console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
             }
             const result = []
             for (let key of keyList) {
-                result.push(target[key])
-                console.assert(
-                    !target[key]._id || target[key]._id == key,
-                    `排序是出现问题，_id 值异常：${target[key]._id} with ${key}`
-                )
-                target[key]._id = key
+                result.push({
+                    value: target[key],
+                    id: key
+                })
                 delete target[key]
             }
-            result.sort((a: any, b: any) => compare(a[value], b[value]))
+            result.sort(comparator)
             for (let item of result) {
-                target[item._id] = item[value]
+                target[item.id] = item.value
             }
-        } else {
-            console.warn(`排序时出现问题，某个键（该键的 key 为“${keyName}”）的排序规则存在问题`)
         }
     }
     const list: { [propName: string]: string | boolean } = {
