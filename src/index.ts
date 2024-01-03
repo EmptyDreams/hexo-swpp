@@ -209,7 +209,7 @@ function sort(hexo: Hexo) {
     Locals.get = function (name: string) {
         const result = getter.call(this, name)
         if (name in list) sort(result, list[name], name)
-        if ('forEach' in result) {
+        if ((typeof result == 'object') && 'forEach' in result) {
             result.forEach((it: any) => {
                 for (let tag in list)
                     sort(it[tag], list[tag], tag)
