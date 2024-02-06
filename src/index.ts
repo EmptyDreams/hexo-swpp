@@ -1,10 +1,17 @@
 import * as fs from 'fs'
 import Hexo from 'hexo'
 import fetch from 'node-fetch'
-import swpp, {AnalyzeResult} from 'swpp-backends'
+import swpp, {AnalyzeResult, SwppRules} from 'swpp-backends'
 import nodePath from 'path'
 
 const logger = require('hexo-log').default()
+
+const CONSOLE_OPTIONS = [
+    {name: '-t, --test', desc: '尝试拉取指定链接'},
+    {name: '-b, --build', desc: '构建 swpp，留空参数与使用该参数效果一致'}
+]
+
+let rules: SwppRules
 
 // noinspection JSUnusedGlobalSymbols
 function start(hexo: Hexo) {
@@ -21,22 +28,54 @@ function start(hexo: Hexo) {
         sort(hexo)
         buildServiceWorker(hexo)
     })
+    hexo.extend.console.register('swpp', 'Hexo Swpp 的相关指令', {
+        options: CONSOLE_OPTIONS
+    }, async args => {
+        const test = args.t ?? args.test
+        // noinspection JSUnresolvedReference
+        const build = args.b ?? args.build
+        if (test) {
+            if (typeof test == 'boolean' || Array.isArray(test) || !/^(https?):\/\/(\S*?)\.(\S*?)(\S*)$/i.test(test)) {
+                logger.error('[SWPP][CONSOLE] --test/-t 后应跟随一个有效 URL')
+            } else {
+                initRules(hexo)
+                try {
+                    const response = await swpp.utils.fetchFile(test)
+                    if ([200, 301, 302, 307, 308].includes(response.status)) {
+                        logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
+                    } else {
+                        logger.warn('[SWPP][LINK TEST] 资源拉取失败，状态码：' + response.status)
+                    }
+                } catch (e) {
+                    logger.warn('[SWPP][LINK TEST] 资源拉取失败', e)
+                }
+            }
+        }
+        if (build) {
+            if (typeof build !== 'boolean') {
+                logger.warn('[SWPP][CONSOLE] -build/-b 后方不应跟随参数')
+            }
+        }
+        if (build || !test)
+            await runSwpp(hexo, pluginConfig)
+    })
     if (pluginConfig['auto_exec']) {
         hexo.on('deployBefore', async () => {
             await runSwpp(hexo, pluginConfig)
         })
-    } else {
-        hexo.extend.console.register('swpp', '生成前端更新需要的 json 文件及后端使用的版本文件', {}, async () => {
-            await runSwpp(hexo, pluginConfig)
-        })
     }
+}
+
+function initRules(hexo: Hexo) {
+    if (!rules)
+        rules = loadRules(hexo)
 }
 
 async function runSwpp(hexo: Hexo, pluginConfig: any) {
     const config = hexo.config
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
-    const rules = loadRules(hexo)
+    initRules(hexo)
     if (!rules.config.json)
         return logger.error(`[SWPP] JSON 生成功能未开启，跳过指令执行`)
     const url = config.url
@@ -58,14 +97,16 @@ function checkVersion(pluginConfig: any) {
         }).then(json => {
             if ('error' in json) return Promise.reject(json.error)
             if ('deprecated' in json) {
-                logger.error(`[SWPP VersionChecker] 您使用的 swpp-backends@${swpp.version} 已被弃用，请更新版本！`)
-                logger.error(`\t补充信息：${json['deprecated']}`)
+                logger.warn(`[SWPP][VersionChecker] 您使用的 swpp-backends@${swpp.version} 已被弃用，请更新版本！`)
+                logger.warn(`\t补充信息：${json['deprecated']}`)
+                logger.warn('请注意！！！当您看到这条消息时，表明您正在使用的后台版本存在漏洞，请务必更新版本！！！')
+                logger.info('可以使用 `npm update swpp-backends` 更新后台版本，或使用您自己常用的等效命令。')
             } else {
-                logger.info('[SWPP VersionChecker] 版本检查通过，注意定期检查版本更新。')
+                logger.info('[SWPP VersionChecker] 版本检查通成功，您使用的版本目前没有被废弃，注意定期检查版本更新。')
             }
         }).catch(err => {
             const isSimple = ['number', 'string'].includes(typeof err)
-            logger.warn(`[SWPP VersionChecker] 版本检查失败${isSimple ? ('（' + err + '）'): ''}`)
+            logger.warn(`[SWPP][VersionChecker] 版本检查失败${isSimple ? ('（' + err + '）'): ''}`)
             if (!isSimple)
                 logger.warn(err)
         })
