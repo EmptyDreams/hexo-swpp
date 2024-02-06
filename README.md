@@ -49,6 +49,12 @@ swpp:
 
 插件的具体配置见 [Swpp Backends 官方文档 | 山岳库博](https://kmar.top/posts/b70ec88f/)。
 
+### 指令
+
+1. `hexo swpp` - 构建 json 文件
+2. `hexo swpp -b` / `hexo swpp --build` - 构建 json 文件，同 `hexo swpp`
+3. `hexo swpp -t [URL]` / `hexo swpp --test [URL]` - 尝试拉取指定 URL，使用时将 `[URL]` 替换为有效的 HTTP/HTTPS 链接（需要附带协议头）
+
 ### sort
 
 `hexo-swpp` 在规则文件中添加了一个配置项——`sort`，用法如下：
@@ -79,6 +85,8 @@ module.exports.config = {
   5. 修复 hexo7 中无法排序 tags 的问题 \[3.3.3]
   6. 修复 hexo7 中执行 `hexo g` 指令时排序报错的问题 \[3.3.5]
   7. 修复属性的值不支持使用`in`时报错的问题 \[3.3.6]
+  8. 添加新的指令 \[3.3.7]
+  9. 优化控制台输出 \[3.3.7]
 
 + 3.2+
 
