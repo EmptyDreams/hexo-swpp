@@ -7,6 +7,18 @@ import {
     swppVersion
 } from 'swpp-backends'
 
+interface PluginConfig {
+
+    enable?: boolean
+    config_name?: string
+    serviceWorker?: string | boolean
+    auto_register?: boolean
+    gen_dom?: boolean
+    auto_exec?: boolean
+    npm_url?: string
+
+}
+
 const logger = require('hexo-log').default()
 
 const CONSOLE_OPTIONS = [
@@ -16,10 +28,18 @@ const CONSOLE_OPTIONS = [
 
 let runtimeData: RuntimeData
 let compilationData: CompilationData
+const configLoadWaitList: (() => void)[] = []
+
+function waitUntilConfig(): Promise<void> {
+    if (runtimeData) return Promise.resolve()
+    return new Promise(resolve => configLoadWaitList.push(resolve))
+}
 
 async function start(hexo: Hexo) {
+    // @ts-ignore
+    globalThis.hexo = hexo
     const config = hexo.config
-    const pluginConfig = config['swpp'] ?? config.theme_config['swpp']
+    const pluginConfig: PluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig?.enable) return
     if (process.argv.find(it => 'server'.startsWith(it)))
         checkVersion(pluginConfig)
@@ -27,9 +47,9 @@ async function start(hexo: Hexo) {
     hexo.on('generateBefore', async () => {
         if (init) return
         init = true
-        await loadConfig(hexo, pluginConfig)
-        sort(hexo)
         buildServiceWorker(hexo, pluginConfig)
+        sort(hexo)
+        await initRules(hexo, pluginConfig)
     })
     hexo.extend.console.register('swpp', 'Hexo Swpp 的相关指令', {
         options: CONSOLE_OPTIONS
@@ -69,11 +89,19 @@ async function start(hexo: Hexo) {
     }
 }
 
-async function initRules(hexo: Hexo, pluginConfig: any) {
-    if (!runtimeData) await loadConfig(hexo, pluginConfig)
+async function initRules(hexo: Hexo, pluginConfig: PluginConfig) {
+    if (!runtimeData) {
+        try {
+            await loadConfig(hexo, pluginConfig)
+            configLoadWaitList.forEach(it => it())
+        } catch (e) {
+            logger.error("[SWPP] 加载时遇到错误。", e)
+            process.exit(114514)
+        }
+    }
 }
 
-async function runSwpp(hexo: Hexo, pluginConfig: any) {
+async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     const config = hexo.config
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
@@ -100,7 +128,7 @@ async function runSwpp(hexo: Hexo, pluginConfig: any) {
     ])
 }
 
-function checkVersion(pluginConfig: any) {
+function checkVersion(pluginConfig: PluginConfig) {
     const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
     fetch(`${root}/swpp-backends/${swppVersion}`)
         .then(response => {
@@ -124,7 +152,7 @@ function checkVersion(pluginConfig: any) {
         })
 }
 
-async function loadConfig(hexo: Hexo, pluginConfig: any) {
+async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
     const loader = new ConfigLoader()
     const configName = pluginConfig['config_name'] ?? 'swpp.config'
@@ -134,7 +162,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: any) {
         for (let extname of extnameList) {
             const uri = `${path}.${extname}`
             if (fs.existsSync(uri)) {
-                await loader.load(uri)
+                await loader.load(nodePath.resolve(uri))
                 break
             }
         }
@@ -144,29 +172,34 @@ async function loadConfig(hexo: Hexo, pluginConfig: any) {
     compilationData = result.compilation
 }
 
-function buildServiceWorker(hexo: Hexo, hexoConfig: any) {
-    const {serviceWorker} = hexoConfig
+function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
+    const {serviceWorker, auto_register, gen_dom} = hexoConfig
     // 生成 sw
     if (serviceWorker ?? true) {
-        hexo.extend.generator.register('build_service_worker', () => {
-            return {
+        hexo.extend.generator.register('build_service_worker', async () => {
+            await waitUntilConfig()
+            return ({
                 path: typeof serviceWorker == 'string' ? serviceWorker : 'sw.js',
                 data: new SwCompiler().buildSwCode(runtimeData)
-            }
+            })
         })
     }
     // 生成注册 sw 的代码
-    if (runtimeData.domConfig?.hasValue('registry')) {
-        hexo.extend.injector.register(
-            'head_begin',
-            () => `(${runtimeData.domConfig.read('registry').toString()})()`
-        )
+    if (auto_register ?? true) {
+        waitUntilConfig().then(() => {
+            hexo.extend.injector.register(
+                'head_begin', `<script>(${runtimeData.domConfig.read('registry').toString()})()</script>`
+            )
+        })
     }
     // 生成 sw-dom.js
-    if (runtimeData.domConfig) {
-        // noinspection HtmlUnknownTarget
-        hexo.extend.injector.register('head_end', `<script defer src="/sw-dom.js"></script>`)
-        hexo.extend.generator.register('build_dom_js', () => {
+    if (gen_dom ?? true) {
+        hexo.extend.injector.register('head_end', () => {
+            // noinspection HtmlUnknownTarget
+            return `<script defer src="/sw-dom.js"></script>`
+        })
+        hexo.extend.generator.register('build_dom_js', async () => {
+            await waitUntilConfig()
             return {
                 path: 'sw-dom.js',
                 data: runtimeData.domConfig.buildJsSource()
@@ -180,9 +213,9 @@ function sort(hexo: Hexo) {
     const version = hexo.version
     let Locals: any
     if (version.startsWith('7')) {
-        Locals = require(nodePath.resolve('./', 'node_modules/hexo/dist/hexo/locals')).prototype
+        Locals = require(nodePath.resolve('node_modules/hexo/dist/hexo/locals')).prototype
     } else {
-        Locals = require(nodePath.resolve('./', 'node_modules/hexo/lib/hexo/locals')).prototype
+        Locals = require(nodePath.resolve('node_modules/hexo/lib/hexo/locals')).prototype
     }
     type SortType = { length: number }
     const compare = (a: SortType, b: SortType) => {
@@ -233,8 +266,7 @@ function sort(hexo: Hexo) {
         pages: 'title',
         tags: 'name'
     }
-    // @ts-ignore
-    Object.assign(list, swpp.cache.readRules().config['sort'] ?? {})
+    // Object.assign(list, swpp.cache.readRules().config['sort'] ?? {})
     const getter = Locals.get
     Locals.get = function (name: string) {
         const result = getter.call(this, name)
@@ -249,11 +281,8 @@ function sort(hexo: Hexo) {
     }
 }
 
-try {
-    // noinspection JSIgnoredPromiseFromCall
-    start(hexo)
-} catch (e) {
+start(hexo).catch(e => {
     logger.error("[SWPP] 加载时遇到错误，可能是由于缺少规则文件。")
     logger.error(e)
     process.exit(114514)
-}
+})
