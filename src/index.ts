@@ -1,8 +1,11 @@
 import * as fs from 'fs'
 import Hexo from 'hexo'
-import fetch from 'node-fetch'
-import swpp, {AnalyzeResult, SwppRules} from 'swpp-backends'
 import nodePath from 'path'
+import {
+    CompilationData, ConfigLoader, FileUpdateTracker, ResourcesScanner,
+    RuntimeData, SwCompiler,
+    swppVersion
+} from 'swpp-backends'
 
 const logger = require('hexo-log').default()
 
@@ -11,22 +14,22 @@ const CONSOLE_OPTIONS = [
     {name: '-b, --build', desc: '构建 swpp，留空参数与使用该参数效果一致'}
 ]
 
-let rules: SwppRules
+let runtimeData: RuntimeData
+let compilationData: CompilationData
 
-// noinspection JSUnusedGlobalSymbols
-function start(hexo: Hexo) {
+async function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig?.enable) return
     if (process.argv.find(it => 'server'.startsWith(it)))
         checkVersion(pluginConfig)
     let init = false
-    hexo.on('generateBefore', () => {
+    hexo.on('generateBefore', async () => {
         if (init) return
         init = true
-        loadRules(hexo)
+        await loadConfig(hexo, pluginConfig)
         sort(hexo)
-        buildServiceWorker(hexo)
+        buildServiceWorker(hexo, pluginConfig)
     })
     hexo.extend.console.register('swpp', 'Hexo Swpp 的相关指令', {
         options: CONSOLE_OPTIONS
@@ -38,9 +41,9 @@ function start(hexo: Hexo) {
             if (typeof test == 'boolean' || Array.isArray(test) || !/^(https?):\/\/(\S*?)\.(\S*?)(\S*)$/i.test(test)) {
                 logger.error('[SWPP][CONSOLE] --test/-t 后应跟随一个有效 URL')
             } else {
-                initRules(hexo)
+                await initRules(hexo, pluginConfig)
                 try {
-                    const response = await swpp.utils.fetchFile(test)
+                    const response = await compilationData.compilationEnv.read('FETCH_NETWORK_FILE').fetch(test)
                     if ([200, 301, 302, 307, 308].includes(response.status)) {
                         logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
                     } else {
@@ -66,38 +69,47 @@ function start(hexo: Hexo) {
     }
 }
 
-function initRules(hexo: Hexo) {
-    if (!rules)
-        rules = loadRules(hexo)
+async function initRules(hexo: Hexo, pluginConfig: any) {
+    if (!runtimeData) await loadConfig(hexo, pluginConfig)
 }
 
 async function runSwpp(hexo: Hexo, pluginConfig: any) {
     const config = hexo.config
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
-    initRules(hexo)
-    if (!rules.config.json)
-        return logger.error(`[SWPP] JSON 生成功能未开启，跳过指令执行`)
-    const url = config.url
-    await Promise.all([
-        swpp.loader.loadUpdateJson(url + '/update.json', pluginConfig['warn_level'] ?? 1),
-        swpp.loader.loadVersionJson(url + '/cacheList.json', pluginConfig['warn_level'] ?? 1)
+    await initRules(hexo, pluginConfig)
+    const scanner = new ResourcesScanner(compilationData)
+    const versionFile = compilationData.compilationEnv.read('SWPP_JSON_FILE')
+    const [tracker, oldTracker] = await Promise.all([
+        scanner.scanLocalFile(config.public_dir),
+        FileUpdateTracker.parserJsonFromNetwork(compilationData)
     ])
-    await buildVersionJson(hexo)
-    const dif = swpp.builder.analyzeVersion()
-    await buildUpdateJson(hexo, dif)
+    const jsonBuilder = tracker.diff(oldTracker)
+    function writeFile(path: string, content: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            fs.writeFile(path, content, 'utf-8', (err) => {
+                if (err) reject(err)
+                else resolve()
+            })
+        })
+    }
+    const json = await jsonBuilder.buildJson()
+    return Promise.all([
+        writeFile(nodePath.join(hexo.config.public_dir, versionFile.versionPath), JSON.stringify(json)),
+        writeFile(nodePath.join(hexo.config.public_dir, versionFile.trackerPath), tracker.json())
+    ])
 }
 
 function checkVersion(pluginConfig: any) {
     const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
-    fetch(`${root}/swpp-backends/${swpp.version}`)
+    fetch(`${root}/swpp-backends/${swppVersion}`)
         .then(response => {
             if (![200, 301, 302, 307, 308].includes(response.status)) return Promise.reject(response.status)
             return response.json()
         }).then(json => {
             if ('error' in json) return Promise.reject(json.error)
             if ('deprecated' in json) {
-                logger.warn(`[SWPP][VersionChecker] 您使用的 swpp-backends@${swpp.version} 已被弃用，请更新版本！`)
+                logger.warn(`[SWPP][VersionChecker] 您使用的 swpp-backends@${swppVersion} 已被弃用，请更新版本！`)
                 logger.warn(`\t补充信息：${json['deprecated']}`)
                 logger.warn('请注意！！！当您看到这条消息时，表明您正在使用的后台版本存在漏洞，请务必更新版本！！！')
                 logger.info('可以使用 `npm update swpp-backends` 更新后台版本，或使用您自己常用的等效命令。')
@@ -112,75 +124,52 @@ function checkVersion(pluginConfig: any) {
         })
 }
 
-function loadRules(hexo: Hexo) {
+async function loadConfig(hexo: Hexo, pluginConfig: any) {
     const themeName = hexo.config.theme
-    swpp.event.addRulesMapEvent(rules => {
-        if ('cacheList' in rules && !('cacheRules' in rules)) {
-            rules.cacheRules = rules['cacheList']
-            delete rules['cacheList']
+    const loader = new ConfigLoader()
+    const configName = pluginConfig['config_name'] ?? 'swpp.config'
+    const configPaths = [configName, `./themes/${themeName}/${configName}`, `./node_modules/hexo-${themeName}/${configName}`]
+    const extnameList = ['ts', 'js', 'cts', 'mts', 'cjs', 'mjs']
+    for (let path of configPaths) {
+        for (let extname of extnameList) {
+            const uri = `${path}.${extname}`
+            if (fs.existsSync(uri)) {
+                await loader.load(uri)
+                break
+            }
         }
-        if ('getCdnList' in rules && !('getRaceUrls' in rules)) {
-            rules.getRaceUrls = rules['getCdnList']
-            delete rules['getCdnList']
-        }
-    })
-    const result = swpp.loader.loadRules(
-        './', 'sw-rules',
-        [`./themes/${themeName}/`, `./node_modules/hexo-${themeName}/`]
-    )
-    swpp.builder.calcEjectValues(hexo)
-    return result
-}
-
-async function buildUpdateJson(hexo: Hexo, dif: AnalyzeResult) {
-    const url = hexo.config.url
-    const json = swpp.builder.buildUpdateJson(url, dif)
-    fs.writeFileSync(`${hexo.config.public_dir}/update.json`, JSON.stringify(json), 'utf-8')
-    logger.info('成功生成：update.json')
-}
-
-async function buildVersionJson(hexo: Hexo) {
-    const url = hexo.config.url
-    let protocol, domain
-    if (url.startsWith('https:')) {
-        protocol = 'https://'
-    } else {
-        protocol = 'http://'
     }
-    domain = url.substring(protocol.length, url.endsWith('/') ? url.length - 1 : url.length)
-    // @ts-ignore
-    const json = await swpp.builder.buildVersionJson(protocol, domain, nodePath.resolve('./', hexo.config.public_dir))
-    fs.writeFileSync(`${hexo.config.public_dir}/cacheList.json`, JSON.stringify(json), 'utf-8')
-    logger.info('成功生成：cacheList.json')
+    const result = loader.generate()
+    runtimeData = result.runtime
+    compilationData = result.compilation
 }
 
-function buildServiceWorker(hexo: Hexo) {
-    const rules = swpp.cache.readRules()
-    const pluginConfig = rules.config
+function buildServiceWorker(hexo: Hexo, hexoConfig: any) {
+    const {serviceWorker} = hexoConfig
     // 生成 sw
-    if (pluginConfig.serviceWorker) {
+    if (serviceWorker ?? true) {
         hexo.extend.generator.register('build_service_worker', () => {
             return {
-                path: 'sw.js',
-                data: swpp.builder.buildServiceWorker()
+                path: typeof serviceWorker == 'string' ? serviceWorker : 'sw.js',
+                data: new SwCompiler().buildSwCode(runtimeData)
             }
         })
     }
     // 生成注册 sw 的代码
-    if (pluginConfig.register) {
+    if (runtimeData.domConfig?.hasValue('registry')) {
         hexo.extend.injector.register(
             'head_begin',
-            () => pluginConfig.register!.builder(hexo.config.url, hexo, pluginConfig)
+            () => `(${runtimeData.domConfig.read('registry').toString()})()`
         )
     }
     // 生成 sw-dom.js
-    if (pluginConfig.dom) {
+    if (runtimeData.domConfig) {
         // noinspection HtmlUnknownTarget
         hexo.extend.injector.register('head_end', `<script defer src="/sw-dom.js"></script>`)
         hexo.extend.generator.register('build_dom_js', () => {
             return {
                 path: 'sw-dom.js',
-                data: swpp.builder.buildDomJs()
+                data: runtimeData.domConfig.buildJsSource()
             }
         })
     }
@@ -261,8 +250,7 @@ function sort(hexo: Hexo) {
 }
 
 try {
-    // noinspection TypeScriptUnresolvedReference
-    // @ts-ignore
+    // noinspection JSIgnoredPromiseFromCall
     start(hexo)
 } catch (e) {
     logger.error("[SWPP] 加载时遇到错误，可能是由于缺少规则文件。")

@@ -25,16 +25,14 @@
   },
   "homepage": "https://kmar.top/posts/73014407/",
   "devDependencies": {
-    "@types/node": "^20.4.7",
-    "@types/node-fetch": "^2.6.4",
-    "hexo": "7.0.0",
-    "typescript": "^5.1.6"
+    "@types/node": "^22.0.2",
+    "hexo": "^7.3.0",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "hexo-log": "^4.1.0",
-    "node-fetch": "^2.6.12"
+    "hexo-log": "^4.1.0"
   },
   "peerDependencies": {
-    "swpp-backends": "^2.1.2"
+    "swpp-backends": "^3.0.0-alpha.5"
   }
 }
