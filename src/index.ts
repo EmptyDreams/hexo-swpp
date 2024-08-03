@@ -23,7 +23,28 @@ interface PluginConfig {
     auto_exec?: boolean
     /** 检查更新的网址，默认 "https://registry.npmjs.org"，注意不能以斜杠结尾 */
     npm_url?: string
-
+    /**
+     * 排序规则。
+     *
+     * 该配置项是为了对 hexo 中的一些变量进行排序，避免每次生成 HTML 时由于这些变量的顺序变动导致生成结果不完全相同。
+     *
+     * 示例：
+     *
+     * ```yaml
+     * # 下面给出的值为插件的缺省值，用户设置该项不会直接覆盖这些值，只有用户也声明 posts、pages 或 tags 时才会覆盖对应的值。
+     * swpp:
+     *   sort_rules:
+     *     posts: 'title'
+     *     pages: 'title'
+     *     tags: 'name'
+     * ```
+     *
+     * 其中 key 值为要排序的变量的名称，value 为变量排序时的依据，
+     * 填 false 表示禁用该项排序，填 true 表示以 value 本身为键进行排序，填字符串表示以 value[tag] 为键进行排序。
+     */
+    sort_rules?: {
+        [name: string]: string | boolean
+    }
 
 }
 
@@ -58,7 +79,7 @@ async function start(hexo: Hexo) {
         if (init) return
         init = true
         buildServiceWorker(hexo, pluginConfig)
-        sort(hexo)
+        sort(hexo, pluginConfig)
         await initRules(hexo, pluginConfig)
     })
     hexo.extend.console.register('swpp', 'Hexo Swpp 的相关指令', {
@@ -105,12 +126,14 @@ async function initRules(hexo: Hexo, pluginConfig: PluginConfig) {
             await loadConfig(hexo, pluginConfig)
             configLoadWaitList.forEach(it => it())
         } catch (e) {
-            logger.error("[SWPP] 加载时遇到错误。", e)
-            process.exit(114514)
+            logger.error("[SWPP] 加载时遇到错误。")
+            logger.error(e)
+            process.exit(0x114514)
         }
     }
 }
 
+/** 运行 swpp 指令 */
 async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     const config = hexo.config
     if (!fs.existsSync(config.public_dir))
@@ -138,6 +161,7 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     ])
 }
 
+/** 检查 swpp-backends 的版本 */
 function checkVersion(pluginConfig: PluginConfig) {
     const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
     fetch(`${root}/swpp-backends/${swppVersion}`)
@@ -162,6 +186,7 @@ function checkVersion(pluginConfig: PluginConfig) {
         })
 }
 
+/** 加载配置文件 */
 async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
     const loader = new ConfigLoader()
@@ -182,6 +207,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     compilationData = result.compilation
 }
 
+/** 注册生成器 */
 function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
     const {serviceWorker, auto_register, gen_dom} = hexoConfig
     // 生成 sw
@@ -219,7 +245,7 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
 }
 
 /** 对 hexo 中的变量进行排序 */
-function sort(hexo: Hexo) {
+function sort(hexo: Hexo, pluginConfig: PluginConfig) {
     const version = hexo.version
     let Locals: any
     if (version.startsWith('7')) {
@@ -276,7 +302,7 @@ function sort(hexo: Hexo) {
         pages: 'title',
         tags: 'name'
     }
-    // Object.assign(list, swpp.cache.readRules().config['sort'] ?? {})
+    Object.assign(list, pluginConfig.sort_rules ?? {})
     const getter = Locals.get
     Locals.get = function (name: string) {
         const result = getter.call(this, name)
@@ -292,7 +318,7 @@ function sort(hexo: Hexo) {
 }
 
 start(hexo).catch(e => {
-    logger.error("[SWPP] 加载时遇到错误，可能是由于缺少规则文件。")
+    logger.error("[SWPP] 加载时遇到严重错误！")
     logger.error(e)
-    process.exit(114514)
+    process.exit(0x19491001)
 })
