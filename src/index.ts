@@ -9,13 +9,21 @@ import {
 
 interface PluginConfig {
 
+    /** 是否启用，默认 false */
     enable?: boolean
+    /** 配置文件名称，默认 "swpp.config" */
     config_name?: string
+    /** sw 生成路径，填 false 表示禁用，默认 true/"sw.js" */
     serviceWorker?: string | boolean
+    /** 是否向所有 HTML 插入注册 sw 的代码，默认 true */
     auto_register?: boolean
+    /** 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script，默认 true */
     gen_dom?: boolean
+    /** 是否在执行 hexo deploy 时自动执行 swpp 指令，默认 false */
     auto_exec?: boolean
+    /** 检查更新的网址，默认 "https://registry.npmjs.org"，注意不能以斜杠结尾 */
     npm_url?: string
+
 
 }
 
@@ -30,11 +38,13 @@ let runtimeData: RuntimeData
 let compilationData: CompilationData
 const configLoadWaitList: (() => void)[] = []
 
+/** 等待配置加载 */
 function waitUntilConfig(): Promise<void> {
     if (runtimeData) return Promise.resolve()
     return new Promise(resolve => configLoadWaitList.push(resolve))
 }
 
+/** 运行插件 */
 async function start(hexo: Hexo) {
     // @ts-ignore
     globalThis.hexo = hexo
