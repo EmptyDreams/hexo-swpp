@@ -192,7 +192,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const loader = new ConfigLoader()
     const configName = pluginConfig['config_name'] ?? 'swpp.config'
     const configPaths = [configName, `./themes/${themeName}/${configName}`, `./node_modules/hexo-${themeName}/${configName}`]
-    const extnameList = ['ts', 'js', 'cts', 'mts', 'cjs', 'mjs']
+    const extnameList = ['ts', 'cts', 'mts', 'js', 'cjs', 'mjs']
     for (let path of configPaths) {
         for (let extname of extnameList) {
             const uri = `${path}.${extname}`
