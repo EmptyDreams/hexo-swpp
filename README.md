@@ -5,7 +5,7 @@
 使用时需要同时安装 `hexo-swpp` 和 `swpp-backends`：
 
 ```bash
-npm install hexo-swpp swpp-backends
+npm install hexo-swpp swpp-backends@3.0.0-alpha.100
 ```
 
 当 `swpp-backends` 存在版本更新时，可以直接更新 `swpp-backends` 版本，不需要更新 `hexo-swpp` 的版本。（不过 `hexo-swpp` 有更新的话最好也跟进一下。）
@@ -18,6 +18,7 @@ npm install hexo-swpp swpp-backends
 |     ~3.1     |      ^1.1.0      |
 |     ~3.2     |      ^2.0.0      |
 |     ~3.3     |      ^2.1.2      |
+|  4.0-alpha   | ^3.0.0-alpha.100 |
 
 ## 使用
 
@@ -25,15 +26,36 @@ npm install hexo-swpp swpp-backends
 
 ```yml
 swpp:
-  # 是否启用插件
+  # 是否启用，默认 false
   enable: true
-  # 是否在发布前自动执行脚本
-  # auto_exec: true
-  # 构建时拉取版本文件的警告等级，缺省为 1（该功能仅在 swpp-backends 版本号 >= 2.1.2 时可用）
-  # 0 - 表示不允许出现 404 情况；1 - 表示允许服务器返回 404 状态码；2 - 表示允许任何 404（包括 DNS 解析失败等）
-  # warn_level: 1
-  # 检查版本的 URL，不能以 '/' 结尾
+  # 配置文件名称，不带拓展名
+  # config_name: 'swpp.config'
+  # 是否生成 sw
+  # serviceWorker: true
+  # 是否向所有 HTML 插入注册 sw 的代码
+  # auto_register: true
+  # 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script
+  # gen_dom: true
+  # 是否在执行 hexo deploy 时自动执行 swpp 指令
+  # auto_exec: false
+  # 检查更新的网址，默认 "https://registry.npmjs.org"，注意不能以斜杠结尾
   # npm_url: 'https://registry.npmmirror.com'
+  #
+  # 排序规则。
+  # 该配置项是为了对 hexo 中的一些变量进行排序，避免每次生成 HTML 时由于这些变量的顺序变动导致生成结果不完全相同。
+  # 示例：
+  # ```yaml
+  # # 下面给出的值为插件的缺省值，用户设置该项不会直接覆盖这些值，只有用户也声明 posts、pages 或 tags 时才会覆盖对应的值。
+  # swpp:
+  #   sort_rules:
+  #     posts: 'title'
+  #     pages: 'title'
+  #     tags: 'name'
+  # ```
+  #
+  # 其中 key 值为要排序的变量的名称，value 为变量排序时的依据，
+  # 填 false 表示禁用该项排序，填 true 表示以 value 本身为键进行排序，填字符串表示以 value[tag] 为键进行排序。
+  # sort_rules:
 ```
 
 插件会在生成网站时自动生成 Service Worker、注册代码、DOM 端支持代码（如果功能开启了的话），版本更新文件需要通过 `hexo swpp` 命令手动生成。
@@ -42,12 +64,11 @@ swpp:
 
 ⚠ 注意：
 
-+ 如果你的网站启用 `swpp` 后还没有发布过，请勿将 `warn_level` 设置为 0，这会导致构建失败。
 + 尽可能在压缩网站内容前执行 `hexo swpp`，因为部分压缩插件可能会出现同样的内容连续压缩结果不一样的问题，这会导致插件错误地更新缓存。
 + 如果你的网站发布过程不使用 `hexo deploy` 指令，则不要启用 `auto_exec` 选项。
 + 将 `npm_url` 调整为非官方 URL 后检查版本时可能会出现 404 错误。
 
-插件的具体配置见 [Swpp Backends 官方文档 | 山岳库博](https://kmar.top/posts/b70ec88f/)。
+SWPP v3 的文档尚未完成，敬请期待。
 
 ### 指令
 
@@ -55,27 +76,10 @@ swpp:
 2. `hexo swpp -b` / `hexo swpp --build` - 构建 json 文件，同 `hexo swpp`
 3. `hexo swpp -t [URL]` / `hexo swpp --test [URL]` - 尝试拉取指定 URL，使用时将 `[URL]` 替换为有效的 HTTP/HTTPS 链接（需要附带协议头）
 
-### sort
-
-`hexo-swpp` 在规则文件中添加了一个配置项——`sort`，用法如下：
-
-```javascript
-module.exports.config = {
-    sort: {
-        posts: 'title',
-        pages: 'title',
-        tags: 'name'
-    }
-}
-```
-
-该配置项是为了对 hexo 中的一些变量进行排序，避免每次生成 HTML 时由于这些变量的顺序变动导致生成结果不完全相同。上方代码给出的值为插件的缺省值，用户设置该项不会直接覆盖这些值，只有用户也声明 `posts`、`pages` 或 `tags` 时才会覆盖对应的值。
-
-其中 key 值为要排序的变量的名称，value 为变量排序时的依据，填 `false` 表示禁用该项排序，填 `true` 表示以 value 本身为键进行排序，填字符串表示以 `value[tag]` 为键进行排序。
-
----
-
 ## 更新日志
+
++ 3.4+
+  1. 适配 `swpp-backends@3`
 
 + 3.3+
   1. 版本检查改为仅在执行 `hexo server` 时执行 \[3.3.0]

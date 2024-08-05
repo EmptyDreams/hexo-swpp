@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import Hexo from 'hexo'
 import nodePath from 'path'
 import {
-    CompilationData, ConfigLoader, FileUpdateTracker, ResourcesScanner,
+    CompilationData, ConfigLoader, ResourcesScanner,
     RuntimeData, SwCompiler,
     swppVersion
 } from 'swpp-backends'
@@ -13,8 +13,8 @@ interface PluginConfig {
     enable?: boolean
     /** 配置文件名称，默认 "swpp.config" */
     config_name?: string
-    /** sw 生成路径，填 false 表示禁用，默认 true/"sw.js" */
-    serviceWorker?: string | boolean
+    /** 是否生成 sw，默认 true */
+    serviceWorker?: boolean
     /** 是否向所有 HTML 插入注册 sw 的代码，默认 true */
     auto_register?: boolean
     /** 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script，默认 true */
@@ -110,12 +110,25 @@ async function start(hexo: Hexo) {
                 logger.warn('[SWPP][CONSOLE] -build/-b 后方不应跟随参数')
             }
         }
-        if (build || !test)
-            await runSwpp(hexo, pluginConfig)
+        if (build || !test) {
+            try {
+                await runSwpp(hexo, pluginConfig)
+            } catch (e) {
+                logger.error('执行 SWPP 指令时出现异常')
+                console.error(e)
+                process.exit(-1)
+            }
+        }
     })
     if (pluginConfig['auto_exec']) {
         hexo.on('deployBefore', async () => {
-            await runSwpp(hexo, pluginConfig)
+            try {
+                await runSwpp(hexo, pluginConfig)
+            } catch (e) {
+                logger.error('执行 SWPP 指令时出现异常')
+                console.error(e)
+                process.exit(-1)
+            }
         })
     }
 }
@@ -141,11 +154,8 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     await initRules(hexo, pluginConfig)
     const scanner = new ResourcesScanner(compilationData)
     const versionFile = compilationData.compilationEnv.read('SWPP_JSON_FILE')
-    const [tracker, oldTracker] = await Promise.all([
-        scanner.scanLocalFile(config.public_dir),
-        FileUpdateTracker.parserJsonFromNetwork(compilationData)
-    ])
-    const jsonBuilder = tracker.diff(oldTracker)
+    const tracker = await scanner.scanLocalFile(config.public_dir)
+    const jsonBuilder = await tracker.diff()
     function writeFile(path: string, content: string): Promise<void> {
         return new Promise((resolve, reject) => {
             fs.writeFile(path, content, 'utf-8', (err) => {
@@ -215,7 +225,7 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
         hexo.extend.generator.register('build_service_worker', async () => {
             await waitUntilConfig()
             return ({
-                path: typeof serviceWorker == 'string' ? serviceWorker : 'sw.js',
+                path: compilationData.compilationEnv.read('SERVICE_WORKER') + '.js',
                 data: new SwCompiler().buildSwCode(runtimeData)
             })
         })
@@ -224,7 +234,7 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
     if (auto_register ?? true) {
         waitUntilConfig().then(() => {
             hexo.extend.injector.register(
-                'head_begin', `<script>(${runtimeData.domConfig.read('registry').toString()})()</script>`
+                'head_begin', `<script>(${runtimeData.domConfig.read('registry')})()</script>`
             )
         })
     }
