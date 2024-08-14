@@ -200,6 +200,11 @@ function checkVersion(pluginConfig: PluginConfig) {
 async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
     const loader = new ConfigLoader()
+    loader.loadFromCode({
+        compilationEnv: {
+            DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url)
+        }
+    })
     const configName = pluginConfig['config_name'] ?? 'swpp.config'
     const configPaths = [configName, `./themes/${themeName}/${configName}`, `./node_modules/hexo-${themeName}/${configName}`]
     const extnameList = ['ts', 'cts', 'mts', 'js', 'cjs', 'mjs']
