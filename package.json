@@ -1,6 +1,6 @@
 {
   "name": "hexo-swpp",
-  "version": "4.0.0-alpha.100",
+  "version": "4.0.0-alpha.101",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "scripts": {
