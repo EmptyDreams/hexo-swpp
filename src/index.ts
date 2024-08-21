@@ -213,10 +213,10 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
         if (isDirectory) {
             const list = fs.readdirSync(path).sort()
             for (let uri of list) {
-                await loader.load(uri)
+                await loader.load(nodePath.resolve(path, uri))
             }
         } else {
-            await loader.load(path)
+            await loader.load(nodePath.resolve(path))
         }
     }
     const result = loader.generate()
