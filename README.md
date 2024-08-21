@@ -18,7 +18,7 @@ npm install hexo-swpp swpp-backends@3.0.0-alpha.100
 |     ~3.1     |      ^1.1.0      |
 |     ~3.2     |      ^2.0.0      |
 |     ~3.3     |      ^2.1.2      |
-|  4.0-alpha   | ^3.0.0-alpha.100 |
+|  4.0-alpha   |   3.0.0-alpha    |
 
 ## 使用
 
@@ -28,8 +28,8 @@ npm install hexo-swpp swpp-backends@3.0.0-alpha.100
 swpp:
   # 是否启用，默认 false
   enable: true
-  # 配置文件名称，不带拓展名
-  # config_name: 'swpp.config'
+  # 配置文件路径，以 `/` 结尾表示加载指定文件夹下的所有文件，注意文件夹中只能有配置文件，不能有其它文件及文件夹
+  # config_path: 'swpp.config.ts'
   # 是否生成 sw
   # serviceWorker: true
   # 是否向所有 HTML 插入注册 sw 的代码
@@ -52,7 +52,6 @@ swpp:
   #     pages: 'title'
   #     tags: 'name'
   # ```
-  #
   # 其中 key 值为要排序的变量的名称，value 为变量排序时的依据，
   # 填 false 表示禁用该项排序，填 true 表示以 value 本身为键进行排序，填字符串表示以 value[tag] 为键进行排序。
   # sort_rules:
@@ -78,7 +77,7 @@ SWPP v3 的文档尚未完成，敬请期待。
 
 ## 更新日志
 
-+ 3.4+
++ 4.0+
   1. 适配 `swpp-backends@3`
 
 + 3.3+

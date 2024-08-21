@@ -11,8 +11,8 @@ interface PluginConfig {
 
     /** 是否启用，默认 false */
     enable?: boolean
-    /** 配置文件名称，默认 "swpp.config" */
-    config_name?: string
+    /** 配置文件名称，默认 "swpp.config.ts" */
+    config_path?: string
     /** 是否生成 sw，默认 true */
     serviceWorker?: boolean
     /** 是否向所有 HTML 插入注册 sw 的代码，默认 true */
@@ -200,21 +200,23 @@ function checkVersion(pluginConfig: PluginConfig) {
 async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
     const loader = new ConfigLoader()
-    loader.loadFromCode({
+    await loader.loadFromCode({
         compilationEnv: {
             DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url)
         }
     })
-    const configName = pluginConfig['config_name'] ?? 'swpp.config'
-    const configPaths = [configName, `./themes/${themeName}/${configName}`, `./node_modules/hexo-${themeName}/${configName}`]
-    const extnameList = ['ts', 'cts', 'mts', 'js', 'cjs', 'mjs']
+    const configPath = pluginConfig['config_path'] ?? 'swpp.config.ts'
+    const configPaths = [configPath, `./themes/${themeName}/${configPath}`, `./node_modules/hexo-${themeName}/${configPath}`]
+    const isDirectory = configPath.endsWith('/')
     for (let path of configPaths) {
-        for (let extname of extnameList) {
-            const uri = `${path}.${extname}`
-            if (fs.existsSync(uri)) {
-                await loader.load(nodePath.resolve(uri))
-                break
+        if (!fs.existsSync(path)) continue
+        if (isDirectory) {
+            const list = fs.readdirSync(path).sort()
+            for (let uri of list) {
+                await loader.load(uri)
             }
+        } else {
+            await loader.load(path)
         }
     }
     const result = loader.generate()
