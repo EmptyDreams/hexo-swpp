@@ -72,8 +72,6 @@ async function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig: PluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig?.enable) return
-    if (process.argv.find(it => 'server'.startsWith(it)))
-        checkVersion(pluginConfig)
     let init = false
     hexo.on('generateBefore', async () => {
         if (init) return
@@ -138,6 +136,8 @@ async function initRules(hexo: Hexo, pluginConfig: PluginConfig) {
         try {
             await loadConfig(hexo, pluginConfig)
             configLoadWaitList.forEach(it => it())
+            if (process.argv.find(it => 'server'.startsWith(it)))
+                checkVersion(pluginConfig)
         } catch (e) {
             logger.error("[SWPP] 加载时遇到错误。")
             logger.error(e)
@@ -174,7 +174,8 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
 /** 检查 swpp-backends 的版本 */
 function checkVersion(pluginConfig: PluginConfig) {
     const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
-    fetch(`${root}/swpp-backends/${swppVersion}`)
+    const fetcher = compilationData.compilationEnv.read('NETWORK_FILE_FETCHER')
+    fetcher.fetch(`${root}/swpp-backends/${swppVersion}`)
         .then(response => {
             if (![200, 301, 302, 307, 308].includes(response.status)) return Promise.reject(response.status)
             return response.json()
