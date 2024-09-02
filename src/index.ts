@@ -19,6 +19,8 @@ interface PluginConfig {
     auto_register?: boolean
     /** 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script，默认 true */
     gen_dom?: boolean
+    /** 生成的 diff 文件的路径（可以是绝对路径也可以是相对路径，使用相对路径时相对于网站发布目录），留空表示不生成 */
+    gen_diff?: string
     /** 是否在执行 hexo deploy 时自动执行 swpp 指令，默认 false */
     auto_exec?: boolean
     /** 检查更新的网址，默认 "https://registry.npmjs.org"，注意不能以斜杠结尾 */
@@ -167,7 +169,8 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     const json = await jsonBuilder.buildJson()
     return Promise.all([
         writeFile(nodePath.join(hexo.config.public_dir, versionFile.versionPath), JSON.stringify(json)),
-        writeFile(nodePath.join(hexo.config.public_dir, versionFile.trackerPath), tracker.json())
+        writeFile(nodePath.join(hexo.config.public_dir, versionFile.trackerPath), tracker.json()),
+        pluginConfig.gen_diff ? writeFile(nodePath.join(hexo.config.public_dir, pluginConfig.gen_diff), jsonBuilder.serialize()) : null
     ])
 }
 
