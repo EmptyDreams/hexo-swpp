@@ -36,6 +36,8 @@ swpp:
   # auto_register: true
   # 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script
   # gen_dom: true
+  # 生成的 diff 文件的路径（可以是绝对路径也可以是相对路径，使用相对路径时相对于网站发布目录），留空表示不生成（默认为 null）
+  # gen_diff: './diff.json'
   # 是否在执行 hexo deploy 时自动执行 swpp 指令
   # auto_exec: false
   # 检查更新的网址，默认 "https://registry.npmjs.org"，注意不能以斜杠结尾
