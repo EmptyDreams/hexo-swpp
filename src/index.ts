@@ -3,7 +3,7 @@ import Hexo from 'hexo'
 import nodePath from 'path'
 import {
     CompilationData, ConfigLoader, ResourcesScanner,
-    RuntimeData, SwCompiler,
+    RuntimeData, RuntimeException, SwCompiler,
     swppVersion
 } from 'swpp-backends'
 
@@ -67,6 +67,50 @@ function waitUntilConfig(): Promise<void> {
     return new Promise(resolve => configLoadWaitList.push(resolve))
 }
 
+function checkHexoConfig(config: any) {
+    // 类型检查
+    const typeMap: any = {
+        'enable': 'boolean',
+        'config_path': 'string',
+        'serviceWorker': 'boolean',
+        'auto_register': 'boolean',
+        'gen_dom': 'boolean',
+        'gen_diff': 'string',
+        'auto_exec': 'boolean',
+        'npm_url': 'string',
+        'sort_rules': 'object',
+    }
+    for (let configKey in config) {
+        const type = typeMap[configKey]
+        if (!type) {
+            throw new RuntimeException('error', `yml 配置项中存在非法字段，不存在 [${configKey}] 配置项，请检查是否拼写错误`)
+        }
+        if (typeof config[configKey] !== type) {
+            throw new RuntimeException(
+                'invalid_var_type',
+                `yml 配置项类型错误，[${configKey}] 应当传入 ${type} 类型`,
+                {your_value: config[configKey]}
+            )
+        }
+    }
+    // 特殊规则校验
+    const pluginConfig = config as PluginConfig
+    if (pluginConfig.gen_diff && !pluginConfig.gen_diff.endsWith('.json')) {
+        throw new RuntimeException(
+            'invalid_value',
+            `yml 配置项中值非法，[gen_diff] 的值应当以 '.json' 结尾`,
+            {your_value: pluginConfig.gen_diff}
+        )
+    }
+    if (pluginConfig.npm_url && pluginConfig.npm_url.endsWith('/')) {
+        throw new RuntimeException(
+            'invalid_value',
+            `yml 配置项中值非法，[npm_url] 的值不应当以 '/' 结尾`,
+            {your_value: pluginConfig.npm_url}
+        )
+    }
+}
+
 /** 运行插件 */
 async function start(hexo: Hexo) {
     // @ts-ignore
@@ -74,6 +118,7 @@ async function start(hexo: Hexo) {
     const config = hexo.config
     const pluginConfig: PluginConfig = config['swpp'] ?? config.theme_config['swpp']
     if (!pluginConfig?.enable) return
+    checkHexoConfig(pluginConfig)
     let init = false
     hexo.on('generateBefore', async () => {
         if (init) return
