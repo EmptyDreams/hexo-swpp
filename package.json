@@ -33,6 +33,6 @@
     "hexo-log": "^4.1.0"
   },
   "peerDependencies": {
-    "swpp-backends": "3.0.0-alpha.402"
+    "swpp-backends": "3.0.0-alpha.410"
   }
 }
