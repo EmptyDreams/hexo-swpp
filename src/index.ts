@@ -139,7 +139,7 @@ async function start(hexo: Hexo) {
             } else {
                 await initRules(hexo, pluginConfig)
                 try {
-                    const response = await compilationData.compilationEnv.read('FETCH_NETWORK_FILE').fetch(test)
+                    const response = await compilationData.compilationEnv.read('NETWORK_FILE_FETCHER').fetch(test)
                     if ([200, 301, 302, 307, 308].includes(response.status)) {
                         logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
                     } else {
