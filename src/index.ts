@@ -213,8 +213,8 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     }
     const json = await jsonBuilder.buildJson()
     return Promise.all([
-        writeFile(nodePath.join(hexo.config.public_dir, versionFile.versionPath), JSON.stringify(json)),
-        writeFile(nodePath.join(hexo.config.public_dir, versionFile.trackerPath), tracker.json()),
+        writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.versionPath), JSON.stringify(json)),
+        writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.trackerPath), tracker.json()),
         pluginConfig.gen_diff ? writeFile(nodePath.join(hexo.config.public_dir, pluginConfig.gen_diff), jsonBuilder.serialize()) : null
     ])
 }
