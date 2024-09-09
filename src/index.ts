@@ -212,6 +212,7 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
         })
     }
     const json = await jsonBuilder.buildJson()
+    fs.mkdirSync(nodePath.join(hexo.config.public_dir, versionFile.swppPath), { recursive: true })
     return Promise.all([
         writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.versionPath), JSON.stringify(json)),
         writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.trackerPath), tracker.json()),
