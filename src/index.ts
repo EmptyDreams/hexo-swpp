@@ -4,7 +4,7 @@ import nodePath from 'path'
 import {
     CompilationData, ConfigLoader, ResourcesScanner,
     RuntimeData, RuntimeException, SwCompiler,
-    swppVersion
+    swppVersion, utils
 } from 'swpp-backends'
 
 interface PluginConfig {
@@ -199,25 +199,30 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
     await initRules(hexo, pluginConfig)
+    // 计算文件目录
+    const jsonInfo = compilationData.compilationEnv.read('SWPP_JSON_FILE')
+    const fileContent: Record<string, () => string> = {}
+    fileContent[nodePath.join(hexo.config.public_dir, jsonInfo.swppPath, jsonInfo.versionPath)] = () => JSON.stringify(json)
+    fileContent[nodePath.join(hexo.config.public_dir, jsonInfo.swppPath, jsonInfo.trackerPath)] = () => tracker.json()
+    if (pluginConfig.gen_diff) {
+        fileContent[nodePath.join(hexo.config.public_dir, pluginConfig.gen_diff)] = () => jsonBuilder.serialize()
+    }
+    // 检查目录是否存在
+    for (let path in fileContent) {
+        if (fs.existsSync(path)) {
+            throw new RuntimeException('file_duplicate', `文件[${path}]已经存在`)
+        }
+    }
+    // 扫描文件
     const scanner = new ResourcesScanner(compilationData)
-    const versionFile = compilationData.compilationEnv.read('SWPP_JSON_FILE')
     const tracker = await scanner.scanLocalFile(config.public_dir)
     const jsonBuilder = await tracker.diff()
-    function writeFile(path: string, content: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            fs.writeFile(path, content, 'utf-8', (err) => {
-                if (err) reject(err)
-                else resolve()
-            })
-        })
-    }
     const json = await jsonBuilder.buildJson()
-    fs.mkdirSync(nodePath.join(hexo.config.public_dir, versionFile.swppPath), { recursive: true })
-    return Promise.all([
-        writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.versionPath), JSON.stringify(json)),
-        writeFile(nodePath.join(hexo.config.public_dir, versionFile.swppPath, versionFile.trackerPath), tracker.json()),
-        pluginConfig.gen_diff ? writeFile(nodePath.join(hexo.config.public_dir, pluginConfig.gen_diff), jsonBuilder.serialize()) : null
-    ])
+    // 生成数据文件
+    await fs.promises.mkdir(nodePath.join(hexo.config.public_dir, jsonInfo.swppPath), { recursive: true })
+    return Promise.all(
+        Object.values(utils.objMap(fileContent, (value, key) => fs.promises.writeFile(key, value(), 'utf-8')))
+    )
 }
 
 /** 检查 swpp-backends 的版本 */
