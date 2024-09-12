@@ -12,8 +12,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       swpp-backends:
-        specifier: ^3.0.0-alpha.430
-        version: 3.0.0-alpha.430
+        specifier: ^3.0.0-alpha.431
+        version: 3.0.0-alpha.431
     devDependencies:
       '@types/node':
         specifier: ^22.0.2
@@ -358,8 +358,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  swpp-backends@3.0.0-alpha.430:
-    resolution: {integrity: sha512-juBoC+OfO/rI5dcxFPl1PF+MTN4g1YOFgRK2Vyt9kevwFLSqPbq4F+2EoyZ5H9myBtaa+5VeduP4INNl8D4yYA==}
+  swpp-backends@3.0.0-alpha.431:
+    resolution: {integrity: sha512-eP8rED/Lv1RCTZdJZxT4zDDgOmJVtMKLkebG+SjlYLKhK9DGhtezRBsefH1DqiQGBWxRCCYdCuH9lFt+Dx5BhQ==}
     hasBin: true
 
   text-table@0.2.0:
@@ -748,7 +748,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swpp-backends@3.0.0-alpha.430:
+  swpp-backends@3.0.0-alpha.431:
     dependencies:
       commander: 12.1.0
       jiti: 2.0.0-beta.3
