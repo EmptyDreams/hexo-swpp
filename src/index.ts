@@ -255,9 +255,11 @@ function checkVersion(pluginConfig: PluginConfig) {
 async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
     const loader = new ConfigLoader()
+    const publishPath = hexo.config.public_dir
     await loader.loadFromCode({
         compilationEnv: {
-            DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url)
+            DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url),
+            PUBLIC_PATH: /[/\\]$/.test(publishPath) ? publishPath.substring(0, publishPath.length - 1) : publishPath
         }
     })
     const configPath = pluginConfig['config_path'] ?? 'swpp.config.ts'
