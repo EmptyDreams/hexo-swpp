@@ -259,7 +259,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     await loader.loadFromCode({
         compilationEnv: {
             DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url),
-            PUBLIC_PATH: /[/\\]$/.test(publishPath) ? publishPath.substring(0, publishPath.length - 1) : publishPath
+            PUBLIC_PATH: /[/\\]$/.test(publishPath) ? publishPath : publishPath + '/'
         }
     })
     const configPath = pluginConfig['config_path'] ?? 'swpp.config.ts'
