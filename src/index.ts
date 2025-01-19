@@ -16,7 +16,7 @@ interface PluginConfig {
     /** 是否向所有 HTML 插入注册 sw 的代码，默认 true */
     auto_register?: boolean
     /** 是否追踪引用连（默认 false） */
-    trackLink?: boolean
+    track_link?: boolean
     /** 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script，默认 true */
     gen_dom?: boolean
     /** 生成的 diff 文件的路径（可以是绝对路径也可以是相对路径，使用相对路径时相对于网站发布目录），留空表示不生成 */
@@ -78,6 +78,7 @@ function checkHexoConfig(config: any) {
         'auto_exec': 'boolean',
         'npm_url': 'string',
         'sort_rules': 'object',
+        'track_link': 'boolean',
     }
     for (let configKey in config) {
         const type = typeMap[configKey]
@@ -247,7 +248,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
         isServiceWorker: pluginConfig.serviceWorker ?? true,
         domJsPath: pluginConfig.gen_dom ? 'sw-dom.js' : undefined,
         diffJsonPath: pluginConfig.gen_diff,
-        trackLink: pluginConfig.trackLink
+        trackLink: pluginConfig.track_link
     })
     await actions.loadConfig({
         compilationEnv: {
