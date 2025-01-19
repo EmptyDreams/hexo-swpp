@@ -2,9 +2,7 @@ import * as fs from 'fs'
 import Hexo from 'hexo'
 import nodePath from 'path'
 import {
-    CompilationData, ConfigLoader, ResourcesScanner,
-    RuntimeData, RuntimeException, SwCompiler,
-    swppVersion, utils
+    BasicActions, RuntimeException, swppVersion
 } from 'swpp-backends'
 
 interface PluginConfig {
@@ -17,6 +15,8 @@ interface PluginConfig {
     serviceWorker?: boolean
     /** 是否向所有 HTML 插入注册 sw 的代码，默认 true */
     auto_register?: boolean
+    /** 是否追踪引用连（默认 false） */
+    trackLink?: boolean
     /** 是否生成 DOM 端的 JS 文件并在 HTML 中插入 script，默认 true */
     gen_dom?: boolean
     /** 生成的 diff 文件的路径（可以是绝对路径也可以是相对路径，使用相对路径时相对于网站发布目录），留空表示不生成 */
@@ -57,13 +57,12 @@ const CONSOLE_OPTIONS = [
     {name: '-b, --build', desc: '构建 swpp，留空参数与使用该参数效果一致'}
 ]
 
-let runtimeData: RuntimeData
-let compilationData: CompilationData
+let actions: BasicActions
 const configLoadWaitList: (() => void)[] = []
 
 /** 等待配置加载 */
 function waitUntilConfig(): Promise<void> {
-    if (runtimeData) return Promise.resolve()
+    if (actions) return Promise.resolve()
     return new Promise(resolve => configLoadWaitList.push(resolve))
 }
 
@@ -139,6 +138,7 @@ async function start(hexo: Hexo) {
             } else {
                 await initRules(hexo, pluginConfig)
                 try {
+                    const compilationData = actions.compilationData!
                     const response = await compilationData.compilationEnv.read('NETWORK_FILE_FETCHER').fetch(test)
                     if ([200, 301, 302, 307, 308].includes(response.status)) {
                         logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
@@ -179,7 +179,7 @@ async function start(hexo: Hexo) {
 }
 
 async function initRules(hexo: Hexo, pluginConfig: PluginConfig) {
-    if (!runtimeData) {
+    if (!actions) {
         try {
             await loadConfig(hexo, pluginConfig)
             configLoadWaitList.forEach(it => it())
@@ -199,34 +199,20 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
     await initRules(hexo, pluginConfig)
-    // 计算文件目录
-    const jsonInfo = compilationData.compilationEnv.read('SWPP_JSON_FILE')
-    const fileContent: Record<string, () => string> = {}
-    fileContent[nodePath.join(hexo.config.public_dir, jsonInfo.swppPath, jsonInfo.versionPath)] = () => JSON.stringify(json)
-    fileContent[nodePath.join(hexo.config.public_dir, jsonInfo.swppPath, jsonInfo.trackerPath)] = () => tracker.json()
-    if (pluginConfig.gen_diff) {
-        fileContent[nodePath.join(hexo.config.public_dir, pluginConfig.gen_diff)] = () => jsonBuilder.serialize()
-    }
-    // 检查目录是否存在
-    for (let path in fileContent) {
-        if (fs.existsSync(path)) {
-            throw new RuntimeException('file_duplicate', `文件[${path}]已经存在`)
+    const fileList = await actions.buildFiles()
+    for (let item of fileList) {
+        if (item.key === 'serviceWorker' || item.key === 'domJs') continue
+        if (await item.path.exists()) {
+            throw new RuntimeException('file_duplicate', `文件[${item.path.absPath}]已经存在`)
         }
+        await fs.promises.mkdir(item.path.parent().absPath, { recursive: true })
+        await fs.promises.writeFile(item.path.absPath, item.content, 'utf-8')
     }
-    // 扫描文件
-    const scanner = new ResourcesScanner(compilationData)
-    const tracker = await scanner.scanLocalFile(config.public_dir)
-    const jsonBuilder = await tracker.diff()
-    const json = await jsonBuilder.buildJson()
-    // 生成数据文件
-    await fs.promises.mkdir(nodePath.join(hexo.config.public_dir, jsonInfo.swppPath), { recursive: true })
-    return Promise.all(
-        Object.values(utils.objMap(fileContent, (value, key) => fs.promises.writeFile(key, value(), 'utf-8')))
-    )
 }
 
 /** 检查 swpp-backends 的版本 */
 function checkVersion(pluginConfig: PluginConfig) {
+    const compilationData = actions.compilationData!
     const root = pluginConfig['npm_url'] ?? 'https://registry.npmjs.org'
     const fetcher = compilationData.compilationEnv.read('NETWORK_FILE_FETCHER')
     fetcher.fetch(`${root}/swpp-backends/${swppVersion}`)
@@ -254,12 +240,18 @@ function checkVersion(pluginConfig: PluginConfig) {
 /** 加载配置文件 */
 async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
     const themeName = hexo.config.theme
-    const loader = new ConfigLoader()
     const publishPath = hexo.config.public_dir
-    await loader.loadFromCode({
+    actions = await BasicActions.build({
+        context: 'prod',
+        publicPath: /[/\\]$/.test(publishPath) ? publishPath : publishPath + '/',
+        isServiceWorker: pluginConfig.serviceWorker ?? true,
+        domJsPath: pluginConfig.gen_dom ? 'sw-dom.js' : undefined,
+        diffJsonPath: pluginConfig.gen_diff,
+        trackLink: pluginConfig.trackLink
+    })
+    await actions.loadConfig({
         compilationEnv: {
-            DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url),
-            PUBLIC_PATH: /[/\\]$/.test(publishPath) ? publishPath : publishPath + '/'
+            DOMAIN_HOST: new URL(hexo.config.root, hexo.config.url)
         }
     })
     const configPath = pluginConfig['config_path'] ?? 'swpp.config.ts'
@@ -270,15 +262,13 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
         if (isDirectory) {
             const list = fs.readdirSync(path).sort()
             for (let uri of list) {
-                await loader.load(nodePath.resolve(path, uri))
+                await actions.loadConfig(nodePath.resolve(path, uri))
             }
         } else {
-            await loader.load(nodePath.resolve(path))
+            await actions.loadConfig(nodePath.resolve(path))
         }
     }
-    const result = loader.generate()
-    runtimeData = result.runtime
-    compilationData = result.compilation
+    actions.buildConfig()
 }
 
 /** 注册生成器 */
@@ -288,15 +278,18 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
     if (serviceWorker ?? true) {
         hexo.extend.generator.register('build_service_worker', async () => {
             await waitUntilConfig()
+            const build = (await actions.buildFiles()).find(it => it.key === 'serviceWorker')
+            if (!build) throw new RuntimeException('error', '未找到 swpp-backends 生成的 sw')
             return ({
-                path: compilationData.compilationEnv.read('SERVICE_WORKER') + '.js',
-                data: new SwCompiler().buildSwCode(runtimeData)
+                path: build.path.fileName(),
+                data: build.content
             })
         })
     }
     // 生成注册 sw 的代码
     if (auto_register ?? true) {
         waitUntilConfig().then(() => {
+            const runtimeData = actions.runtimeData!
             hexo.extend.injector.register(
                 'head_begin', `<script>(${runtimeData.domConfig.read('registry')})()</script>`
             )
@@ -310,9 +303,11 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
         })
         hexo.extend.generator.register('build_dom_js', async () => {
             await waitUntilConfig()
+            const build = (await actions.buildFiles()).find(it => it.key === 'domJs')
+            if (!build) throw new RuntimeException('error', '未找到 swpp-backends 生成的 sw-dom.js')
             return {
                 path: 'sw-dom.js',
-                data: runtimeData.domConfig.buildJsSource()
+                data: build.content
             }
         })
     }

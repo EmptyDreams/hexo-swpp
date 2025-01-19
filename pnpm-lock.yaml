@@ -12,8 +12,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       swpp-backends:
-        specifier: ^3.0.0-alpha.600
-        version: 3.0.0-alpha.600
+        specifier: ^3.0.0-alpha.810
+        version: 3.0.0-alpha.810
     devDependencies:
       '@types/node':
         specifier: ^22.0.2
@@ -223,8 +223,8 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
-  jiti@2.0.0-beta.3:
-    resolution: {integrity: sha512-pmfRbVRs/7khFrSAYnSiJ8C0D5GvzkE4Ey2pAvUcJsw1ly/p+7ut27jbJrjY79BpAJQJ4gXYFtK6d1Aub+9baQ==}
+  jiti@2.4.2:
+    resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
     hasBin: true
 
   js-yaml-js-types@1.0.1:
@@ -269,8 +269,8 @@ packages:
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
 
-  node-html-parser@6.1.13:
-    resolution: {integrity: sha512-qIsTMOY4C/dAa5Q5vsobRpOOvPfC4pB61UVW2uSwZNUp0QU/jCekTal1vMmbO0DgdHeLUJpv/ARmDqErVxA3Sg==}
+  node-html-parser@7.0.1:
+    resolution: {integrity: sha512-KGtmPY2kS0thCWGK0VuPyOS+pBKhhe8gXztzA2ilAOhbUbxa9homF1bOyKvhGzMLXUoRds9IOmr/v5lr/lqNmA==}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -358,8 +358,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  swpp-backends@3.0.0-alpha.600:
-    resolution: {integrity: sha512-PwXy4IUOerlO4hPHsAknGM8h07egWCcgwtVG4nd6CKJU15UaGyOhSYlAZMM5XQuML2igG036wxMBTugKgEd0jw==}
+  swpp-backends@3.0.0-alpha.810:
+    resolution: {integrity: sha512-KmrY+2v89Z1fP0wQmm6C8sU7fSnesohFR58HzNWRH1X3wI8JPXjVXsH+/5rUZ/i5cp4UHUr+LYe2ZFp9ihybvA==}
     hasBin: true
 
   text-table@0.2.0:
@@ -626,7 +626,7 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  jiti@2.0.0-beta.3: {}
+  jiti@2.4.2: {}
 
   js-yaml-js-types@1.0.1(js-yaml@4.1.0):
     dependencies:
@@ -670,7 +670,7 @@ snapshots:
       lower-case: 2.0.2
       tslib: 2.6.1
 
-  node-html-parser@6.1.13:
+  node-html-parser@7.0.1:
     dependencies:
       css-select: 5.1.0
       he: 1.2.0
@@ -748,11 +748,11 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swpp-backends@3.0.0-alpha.600:
+  swpp-backends@3.0.0-alpha.810:
     dependencies:
       commander: 12.1.0
-      jiti: 2.0.0-beta.3
-      node-html-parser: 6.1.13
+      jiti: 2.4.2
+      node-html-parser: 7.0.1
 
   text-table@0.2.0: {}
 
