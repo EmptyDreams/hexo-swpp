@@ -200,9 +200,11 @@ async function runSwpp(hexo: Hexo, pluginConfig: PluginConfig) {
     if (!fs.existsSync(config.public_dir))
         return logger.warn(`[SWPP] 未检测到发布目录，跳过指令执行`)
     await initRules(hexo, pluginConfig)
-    const fileList = await actions.buildFiles()
+    const fileList = await actions.buildFiles(
+        // @ts-ignore
+        ['serviceWorker', 'domJs', ...(pluginConfig.gen_diff ? [] : ['diffJson'])]
+    )
     for (let item of fileList) {
-        if (item.key === 'serviceWorker' || item.key === 'domJs') continue
         if (await item.path.exists()) {
             throw new RuntimeException('file_duplicate', `文件[${item.path.absPath}]已经存在`)
         }
@@ -279,7 +281,9 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
     if (serviceWorker ?? true) {
         hexo.extend.generator.register('build_service_worker', async () => {
             await waitUntilConfig()
-            const build = (await actions.buildFiles()).find(it => it.key === 'serviceWorker')
+            const build = (await actions.buildFiles(
+                ['tracker', 'version', 'diffJson', 'domJs']
+            )).find(it => it.key === 'serviceWorker')
             if (!build) throw new RuntimeException('error', '未找到 swpp-backends 生成的 sw')
             return ({
                 path: build.path.fileName(),
@@ -304,7 +308,9 @@ function buildServiceWorker(hexo: Hexo, hexoConfig: PluginConfig) {
         })
         hexo.extend.generator.register('build_dom_js', async () => {
             await waitUntilConfig()
-            const build = (await actions.buildFiles()).find(it => it.key === 'domJs')
+            const build = (await actions.buildFiles(
+                ['serviceWorker', 'tracker', 'version', 'diffJson']
+            )).find(it => it.key === 'domJs')
             if (!build) throw new RuntimeException('error', '未找到 swpp-backends 生成的 sw-dom.js')
             return {
                 path: 'sw-dom.js',
