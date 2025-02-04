@@ -1,9 +1,9 @@
 ---
 name: Hexo-Swpp 漏洞报告
-about: 如果在使用 Hexo-Swpp 时遇到了错误请通过此模板提交。
-title: ''
+about: 如果在使用 Hexo-Swpp 时遇到了错误（包括但不限于崩溃、报错、生成结果错误等）请通过此模板提交。
+title: "[BUG]"
 labels: bug
-assignees: ''
+assignees: EmptyDreams
 
 ---
 
