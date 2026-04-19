@@ -244,7 +244,7 @@ async function loadConfig(hexo: Hexo, pluginConfig: PluginConfig) {
         context: 'prod',
         publicPath: /[/\\]$/.test(publishPath) ? publishPath : publishPath + '/',
         isServiceWorker: pluginConfig.serviceWorker ?? true,
-        domJsPath: pluginConfig.gen_dom ? 'sw-dom.js' : undefined,
+        domJsPath: pluginConfig.gen_dom ?? true ? 'sw-dom.js' : undefined,
         diffJsonPath: pluginConfig.gen_diff,
     })
     await actions.loadConfig({
