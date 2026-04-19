@@ -1,11 +1,16 @@
 这是 `swpp-backends` 的 hexo 端实现，绝大多数功能由 [swpp-backends](https://github.com/EmptyDreams/swpp-backends) 提供。
 
+文档：
+
+1. swpp-backends 文档：https://swpp.kmar.top/
+2. hexo-swpp 文档：https://swpp.kmar.top/quickstart/hexo
+
 ## 安装
 
 使用时需要同时安装 `hexo-swpp` 和 `swpp-backends`：
 
 ```bash
-npm install hexo-swpp swpp-backends@3.0.0-alpha.100
+npm install hexo-swpp swpp-backends
 ```
 
 当 `swpp-backends` 存在版本更新时，可以直接更新 `swpp-backends` 版本，不需要更新 `hexo-swpp` 的版本。（不过 `hexo-swpp` 有更新的话最好也跟进一下。）
@@ -19,6 +24,8 @@ npm install hexo-swpp swpp-backends@3.0.0-alpha.100
 |     ~3.2     |      ^2.0.0      |
 |     ~3.3     |      ^2.1.2      |
 |  4.0-alpha   |   3.0.0-alpha    |
+|    4.0.0     |      ^3.0.0      |
+|    ^4.0.1    |      ^3.1.0      |
 
 ## 使用
 
@@ -69,20 +76,22 @@ swpp:
 + 如果你的网站发布过程不使用 `hexo deploy` 指令，则不要启用 `auto_exec` 选项。
 + 将 `npm_url` 调整为非官方 URL 后检查版本时可能会出现 404 错误。
 
-SWPP v3 的文档尚未完成，敬请期待。
-
 ### 指令
 
 1. `hexo swpp` - 构建 json 文件
 2. `hexo swpp -b` / `hexo swpp --build` - 构建 json 文件，同 `hexo swpp`
-3. `hexo swpp -t [URL]` / `hexo swpp --test [URL]` - 尝试拉取指定 URL，使用时将 `[URL]` 替换为有效的 HTTP/HTTPS 链接（需要附带协议头）
 
 ## 更新日志
 
 + 4.0+
-  1. 适配 `swpp-backends@3`
-  2. 修复无法与 `hexo8` 一同工作的问题
+
+  该版本与 V3 不兼容，请注意修改配置文件！
+
+  1. 适配 `swpp-backends@3` \[4.0.0]
+  2. 修复无法与 `hexo8` 一同工作的问题 \[4.0.0]
   3. 修复不支持 `swpp-backends@3.1.0+` 的问题 \[4.0.1]
+  4. 修复 `gen_dom` 默认值处理错误的问题 \[4.0.2]
+  5. 移除 `-t/-test` 命令 \[4.0.2]
 
 + 3.3+
   1. 版本检查改为仅在执行 `hexo server` 时执行 \[3.3.0]

@@ -23,7 +23,7 @@
     "type": "git",
     "url": "https://github.com/EmptyDreams/hexo-swpp.git"
   },
-  "homepage": "https://kmar.top/posts/73014407/",
+  "homepage": "https://swpp.kmar.top/",
   "devDependencies": {
     "@types/node": "^22.0.2",
     "hexo": "^7.3.0",
