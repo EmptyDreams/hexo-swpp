@@ -51,6 +51,7 @@ interface PluginConfig {
 const logger = require('hexo-log').default()
 
 const CONSOLE_OPTIONS = [
+    {name: '-t, --test', desc: '尝试拉取指定链接'},
     {name: '-b, --build', desc: '构建 swpp，留空参数与使用该参数效果一致'}
 ]
 
@@ -126,12 +127,33 @@ async function start(hexo: Hexo) {
     hexo.extend.console.register('swpp', 'Hexo Swpp 的相关指令', {
         options: CONSOLE_OPTIONS
     }, async args => {
+        const test = args.t ?? args.test
         // noinspection JSUnresolvedReference
         const build = args.b ?? args.build
+        if (test) {
+            if (typeof test == 'boolean' || Array.isArray(test) || !/^(https?):\/\/(\S*?)\.(\S*?)(\S*)$/i.test(test)) {
+                logger.error('[SWPP][CONSOLE] --test/-t 后应跟随一个有效 URL')
+            } else {
+                await initRules(hexo, pluginConfig)
+                try {
+                    const compilationData = actions.compilationData!
+                    const response = await fetchUrl(compilationData, test)
+                    if ([200, 301, 302, 307, 308].includes(response.status)) {
+                        logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
+                    } else {
+                        logger.warn('[SWPP][LINK TEST] 资源拉取失败，状态码：' + response.status)
+                    }
+                } catch (e) {
+                    logger.warn('[SWPP][LINK TEST] 资源拉取失败', e)
+                }
+            }
+        }
         if (build) {
             if (typeof build !== 'boolean') {
                 logger.warn('[SWPP][CONSOLE] -build/-b 后方不应跟随参数')
             }
+        }
+        if (build || !test) {
             try {
                 await runSwpp(hexo, pluginConfig)
             } catch (e) {
