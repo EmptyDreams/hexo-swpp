@@ -137,8 +137,9 @@ async function start(hexo: Hexo) {
                 await initRules(hexo, pluginConfig)
                 try {
                     const compilationData = actions.compilationData!
+                    const isSuccessful = compilationData.crossDep.read('isFetchSuccessful')
                     const response = await fetchUrl(compilationData, test)
-                    if ([200, 301, 302, 307, 308].includes(response.status)) {
+                    if (isSuccessful.runOnNode(response)) {
                         logger.info('[SWPP][LINK TEST] 资源拉取成功，状态码：' + response.status)
                     } else {
                         logger.warn('[SWPP][LINK TEST] 资源拉取失败，状态码：' + response.status)
